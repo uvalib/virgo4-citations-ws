@@ -11,7 +11,7 @@ type citationsContext struct {
 	url    string
 }
 
-type searchResponse struct {
+type serviceResponse struct {
 	status int         // http status code
 	data   interface{} // data to return as JSON
 	err    error       // error, if any
@@ -30,12 +30,14 @@ func (s *citationsContext) err(format string, args ...interface{}) {
 	s.client.err(format, args...)
 }
 
-func (s *citationsContext) handleRISRequest() searchResponse {
-	if s.url != "" {
-		s.log("url = [%s]", s.url)
-	} else {
-		s.err("empty url")
+func (s *citationsContext) handleRISRequest() serviceResponse {
+	rec, resp := s.queryPoolRecord()
+
+	if resp.err != nil {
+		return resp
 	}
 
-	return searchResponse{status: http.StatusNotImplemented, err: fmt.Errorf("not yet implemented")}
+	s.log("rec: %#v", rec)
+
+	return serviceResponse{status: http.StatusNotImplemented, err: fmt.Errorf("handleRISRequest() not yet implemented")}
 }

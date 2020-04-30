@@ -18,8 +18,6 @@ func (p *serviceContext) risHandler(c *gin.Context) {
 	s := citationsContext{}
 	s.init(p, &cl)
 
-	s.url = c.Query("url")
-
 	cl.logRequest()
 	resp := s.handleRISRequest()
 	cl.logResponse(resp)

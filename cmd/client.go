@@ -65,7 +65,7 @@ func (c *clientContext) logRequest() {
 	c.log("[REQUEST] %s %s%s  %s", c.ginCtx.Request.Method, c.ginCtx.Request.URL.Path, query, claimsStr)
 }
 
-func (c *clientContext) logResponse(resp searchResponse) {
+func (c *clientContext) logResponse(resp serviceResponse) {
 	msg := fmt.Sprintf("[RESPONSE] status: %d", resp.status)
 
 	if resp.err != nil {
