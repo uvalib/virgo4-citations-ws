@@ -16,10 +16,15 @@ type serviceConfigPools struct {
 	ReadTimeout string `json:"read_timeout,omitempty"`
 }
 
+type serviceConfigJWT struct {
+	Key        string `json:"key,omitempty"`
+	Expiration int    `json:"expiration,omitempty"`
+}
+
 type serviceConfig struct {
-	Port   string             `json:"port,omitempty"`
-	JWTKey string             `json:"jwt_key,omitempty"`
-	Pools  serviceConfigPools `json:"pools,omitempty"`
+	Port  string             `json:"port,omitempty"`
+	JWT   serviceConfigJWT   `json:"jwt,omitempty"`
+	Pools serviceConfigPools `json:"pools,omitempty"`
 }
 
 func getSortedJSONEnvVars() []string {

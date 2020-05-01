@@ -8,10 +8,26 @@ import (
 	"time"
 
 	"github.com/uvalib/virgo4-api/v4api"
+	"github.com/uvalib/virgo4-jwt/v4jwt"
 )
 
 func (s *citationsContext) queryPoolRecord() (*v4api.Record, serviceResponse) {
 	var err error
+
+	// create a short-lived single-use token, (ab)using IsUVA claim to make
+	// sure we get all possible info from the pool.
+
+	// there is a risk that anyone can access protected resources through
+	// this service, but that is limited to the citation info exposed by each pool.
+
+	claims := v4jwt.V4Claims{IsUVA: true}
+
+	token, jwtErr := v4jwt.Mint(claims, time.Duration(s.svc.config.JWT.Expiration)*time.Minute, s.svc.config.JWT.Key)
+	if jwtErr != nil {
+		err = fmt.Errorf("failed to mint JWT: %s", jwtErr.Error())
+		s.err(err.Error())
+		return nil, serviceResponse{status: http.StatusBadRequest, err: err}
+	}
 
 	url := s.client.ginCtx.Query("url")
 
@@ -21,8 +37,6 @@ func (s *citationsContext) queryPoolRecord() (*v4api.Record, serviceResponse) {
 		return nil, serviceResponse{status: http.StatusBadRequest, err: err}
 	}
 
-	s.log("url = [%s]", s.url)
-
 	req, reqErr := http.NewRequest("GET", url, nil)
 	if reqErr != nil {
 		s.log("[POOL] NewRequest() failed: %s", reqErr.Error())
@@ -30,7 +44,7 @@ func (s *citationsContext) queryPoolRecord() (*v4api.Record, serviceResponse) {
 		return nil, serviceResponse{status: http.StatusInternalServerError, err: err}
 	}
 
-	req.Header.Set("Authorization", s.client.ginCtx.GetHeader("Authorization"))
+	req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", token))
 
 	start := time.Now()
 	res, resErr := s.svc.pools.client.Do(req)

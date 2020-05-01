@@ -8,7 +8,6 @@ import (
 type citationsContext struct {
 	svc    *serviceContext
 	client *clientContext
-	url    string
 }
 
 type serviceResponse struct {
@@ -37,7 +36,11 @@ func (s *citationsContext) handleRISRequest() serviceResponse {
 		return resp
 	}
 
-	s.log("rec: %#v", rec)
+	for _, field := range rec.Fields {
+		if field.RISCode != "" {
+			s.log("%s  %s", field.RISCode, field.Value)
+		}
+	}
 
 	return serviceResponse{status: http.StatusNotImplemented, err: fmt.Errorf("handleRISRequest() not yet implemented")}
 }

@@ -1,14 +1,9 @@
 package main
 
 import (
-	"errors"
-	"fmt"
-	"log"
 	"net/http"
-	"strings"
 
 	"github.com/gin-gonic/gin"
-	"github.com/uvalib/virgo4-jwt/v4jwt"
 )
 
 func (p *serviceContext) risHandler(c *gin.Context) {
@@ -63,40 +58,4 @@ func (p *serviceContext) healthCheckHandler(c *gin.Context) {
 	hcMap["self"] = hcResp{Healthy: true}
 
 	c.JSON(http.StatusOK, hcMap)
-}
-
-func getBearerToken(authorization string) (string, error) {
-	components := strings.Split(strings.Join(strings.Fields(authorization), " "), " ")
-
-	// must have two components, the first of which is "Bearer", and the second a non-empty token
-	if len(components) != 2 || components[0] != "Bearer" || components[1] == "" {
-		return "", fmt.Errorf("invalid Authorization header: [%s]", authorization)
-	}
-
-	token := components[1]
-
-	if token == "undefined" {
-		return "", errors.New("bearer token is undefined")
-	}
-
-	return token, nil
-}
-
-func (p *serviceContext) authenticateHandler(c *gin.Context) {
-	token, err := getBearerToken(c.GetHeader("Authorization"))
-	if err != nil {
-		log.Printf("Authentication failed: [%s]", err.Error())
-		c.AbortWithStatus(http.StatusUnauthorized)
-		return
-	}
-
-	claims, err := v4jwt.Validate(token, p.config.JWTKey)
-
-	if err != nil {
-		log.Printf("JWT signature for %s is invalid: %s", token, err.Error())
-		c.AbortWithStatus(http.StatusUnauthorized)
-		return
-	}
-
-	c.Set("claims", claims)
 }

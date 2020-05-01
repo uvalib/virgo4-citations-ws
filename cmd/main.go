@@ -49,9 +49,7 @@ func main() {
 	router.GET("/version", svc.versionHandler)
 	router.GET("/healthcheck", svc.healthCheckHandler)
 
-	if api := router.Group("/api"); api != nil {
-		api.GET("/ris", svc.authenticateHandler, svc.risHandler)
-	}
+	router.GET("/ris", svc.risHandler)
 
 	portStr := fmt.Sprintf(":%s", svc.config.Port)
 	log.Printf("[MAIN] listening on %s", portStr)
