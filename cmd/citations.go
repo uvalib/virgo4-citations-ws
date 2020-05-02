@@ -1,24 +1,34 @@
 package main
 
 import (
-	"fmt"
 	"net/http"
+	"path"
 )
 
+type citationType interface {
+	ContentType() string
+	FileName() string
+	FileContents() (string, error)
+}
+
 type citationsContext struct {
-	svc    *serviceContext
-	client *clientContext
+	svc     *serviceContext
+	client  *clientContext
+	itemURL string
+	itemID  string
 }
 
 type serviceResponse struct {
-	status int         // http status code
-	data   interface{} // data to return as JSON
-	err    error       // error, if any
+	status int   // http status code
+	err    error // error, if any
 }
 
 func (s *citationsContext) init(p *serviceContext, c *clientContext) {
 	s.svc = p
 	s.client = c
+
+	s.itemURL = c.ginCtx.Query("item")
+	s.itemID = path.Base(s.itemURL)
 }
 
 func (s *citationsContext) log(format string, args ...interface{}) {
@@ -29,18 +39,20 @@ func (s *citationsContext) err(format string, args ...interface{}) {
 	s.client.err(format, args...)
 }
 
-func (s *citationsContext) handleRISRequest() serviceResponse {
+func (s *citationsContext) handleRISRequest() (citationType, serviceResponse) {
 	rec, resp := s.queryPoolRecord()
 
 	if resp.err != nil {
-		return resp
+		return nil, resp
 	}
+
+	ris := newRisEncoder(s.itemID)
 
 	for _, field := range rec.Fields {
 		if field.RISCode != "" {
-			s.log("%s  %s", field.RISCode, field.Value)
+			ris.addTagValue(field.RISCode, field.Value)
 		}
 	}
 
-	return serviceResponse{status: http.StatusNotImplemented, err: fmt.Errorf("handleRISRequest() not yet implemented")}
+	return ris, serviceResponse{status: http.StatusOK}
 }

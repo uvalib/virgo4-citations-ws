@@ -1,7 +1,9 @@
 package main
 
 import (
+	"fmt"
 	"net/http"
+	"strings"
 
 	"github.com/gin-gonic/gin"
 )
@@ -14,7 +16,7 @@ func (p *serviceContext) risHandler(c *gin.Context) {
 	s.init(p, &cl)
 
 	cl.logRequest()
-	resp := s.handleRISRequest()
+	ris, resp := s.handleRISRequest()
 	cl.logResponse(resp)
 
 	if resp.err != nil {
@@ -22,7 +24,7 @@ func (p *serviceContext) risHandler(c *gin.Context) {
 		return
 	}
 
-	c.JSON(resp.status, resp.data)
+	serveCitation(c, ris)
 }
 
 func (p *serviceContext) ignoreHandler(c *gin.Context) {
@@ -58,4 +60,23 @@ func (p *serviceContext) healthCheckHandler(c *gin.Context) {
 	hcMap["self"] = hcResp{Healthy: true}
 
 	c.JSON(http.StatusOK, hcMap)
+}
+
+func serveCitation(c *gin.Context, citation citationType) {
+	data, err := citation.FileContents()
+
+	if err != nil {
+		c.String(http.StatusInternalServerError, err.Error())
+	}
+
+	reader := strings.NewReader(data)
+	contentLength := int64(len(data))
+	contentType := citation.ContentType()
+	fileName := citation.FileName()
+
+	extraHeaders := map[string]string{
+		"Content-Disposition:": fmt.Sprintf(`attachment; filename="%s"`, fileName),
+	}
+
+	c.DataFromReader(http.StatusOK, contentLength, contentType, reader, extraHeaders)
 }

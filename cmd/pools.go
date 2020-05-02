@@ -29,10 +29,10 @@ func (s *citationsContext) queryPoolRecord() (*v4api.Record, serviceResponse) {
 		return nil, serviceResponse{status: http.StatusBadRequest, err: err}
 	}
 
-	url := s.client.ginCtx.Query("url")
+	url := s.itemURL
 
 	if url == "" {
-		err = fmt.Errorf("missing url")
+		err = fmt.Errorf("missing or invalid url")
 		s.err(err.Error())
 		return nil, serviceResponse{status: http.StatusBadRequest, err: err}
 	}
