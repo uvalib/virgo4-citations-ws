@@ -24,7 +24,7 @@ func (p *serviceContext) risHandler(c *gin.Context) {
 		return
 	}
 
-	serveCitation(c, ris)
+	s.serveCitation(ris)
 }
 
 func (p *serviceContext) ignoreHandler(c *gin.Context) {
@@ -62,11 +62,19 @@ func (p *serviceContext) healthCheckHandler(c *gin.Context) {
 	c.JSON(http.StatusOK, hcMap)
 }
 
-func serveCitation(c *gin.Context, citation citationType) {
+func (s *citationsContext) serveCitation(citation citationType) {
+	c := s.client.ginCtx
+
 	data, err := citation.FileContents()
 
 	if err != nil {
 		c.String(http.StatusInternalServerError, err.Error())
+		return
+	}
+
+	if s.client.opts.inline == true {
+		c.String(http.StatusOK, data)
+		return
 	}
 
 	reader := strings.NewReader(data)

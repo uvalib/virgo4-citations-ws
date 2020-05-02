@@ -4,7 +4,6 @@ go 1.14
 
 require (
 	github.com/gin-contrib/cors v1.3.1
-	github.com/gin-contrib/gzip v0.0.1
 	github.com/gin-gonic/gin v1.6.2
 	github.com/konsorten/go-windows-terminal-sequences v1.0.3 // indirect
 	github.com/prometheus/client_golang v1.6.0
