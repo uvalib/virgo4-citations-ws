@@ -5,7 +5,6 @@ import (
 	"log"
 
 	"github.com/gin-contrib/cors"
-	"github.com/gin-contrib/gzip"
 	"github.com/gin-gonic/gin"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
@@ -26,8 +25,6 @@ func main() {
 
 	router := gin.Default()
 
-	router.Use(gzip.Gzip(gzip.DefaultCompression))
-
 	corsCfg := cors.DefaultConfig()
 	corsCfg.AllowAllOrigins = true
 	corsCfg.AllowCredentials = true
@@ -36,7 +33,7 @@ func main() {
 
 	p := ginprometheus.NewPrometheus("gin")
 
-	// roundabout setup of /metrics endpoint to avoid double-gzip of response
+	// roundabout setup of /metrics endpoint to avoid extra gzip of response
 	router.Use(p.HandlerFunc())
 	h := promhttp.InstrumentMetricHandler(prometheus.DefaultRegisterer, promhttp.HandlerFor(prometheus.DefaultGatherer, promhttp.HandlerOpts{DisableCompression: true}))
 
