@@ -11,7 +11,7 @@ import (
 	ginprometheus "github.com/zsais/go-gin-prometheus"
 )
 
-/**
+/*
  * Main entry point for the web service
  */
 func main() {
@@ -46,7 +46,9 @@ func main() {
 	router.GET("/version", svc.versionHandler)
 	router.GET("/healthcheck", svc.healthCheckHandler)
 
-	router.GET("/ris", svc.risHandler)
+	if format := router.Group("/format"); format != nil {
+		format.GET("/ris", svc.risHandler)
+	}
 
 	portStr := fmt.Sprintf(":%s", svc.config.Port)
 	log.Printf("[MAIN] listening on %s", portStr)
