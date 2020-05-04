@@ -29,15 +29,13 @@ func (s *citationsContext) queryPoolRecord() (*v4api.Record, serviceResponse) {
 		return nil, serviceResponse{status: http.StatusBadRequest, err: err}
 	}
 
-	url := s.itemURL
-
-	if url == "" {
+	if s.url == "" {
 		err = fmt.Errorf("missing or invalid url")
 		s.err(err.Error())
 		return nil, serviceResponse{status: http.StatusBadRequest, err: err}
 	}
 
-	req, reqErr := http.NewRequest("GET", url, nil)
+	req, reqErr := http.NewRequest("GET", s.url, nil)
 	if reqErr != nil {
 		s.log("[POOL] NewRequest() failed: %s", reqErr.Error())
 		err = fmt.Errorf("failed to create pool record request")
@@ -57,14 +55,14 @@ func (s *citationsContext) queryPoolRecord() (*v4api.Record, serviceResponse) {
 		errMsg := resErr.Error()
 		if strings.Contains(errMsg, "Timeout") {
 			status = http.StatusRequestTimeout
-			errMsg = fmt.Sprintf("%s timed out", url)
+			errMsg = fmt.Sprintf("%s timed out", s.url)
 		} else if strings.Contains(errMsg, "connection refused") {
 			status = http.StatusServiceUnavailable
-			errMsg = fmt.Sprintf("%s refused connection", url)
+			errMsg = fmt.Sprintf("%s refused connection", s.url)
 		}
 
 		s.log("[POOL] client.Do() failed: %s", resErr.Error())
-		s.log("ERROR: Failed response from %s %s - %d:%s. Elapsed Time: %d (ms)", req.Method, url, status, errMsg, elapsedMS)
+		s.log("ERROR: Failed response from %s %s - %d:%s. Elapsed Time: %d (ms)", req.Method, s.url, status, errMsg, elapsedMS)
 		err = fmt.Errorf("failed to receive pool record response")
 		return nil, serviceResponse{status: http.StatusInternalServerError, err: err}
 	}
@@ -74,7 +72,7 @@ func (s *citationsContext) queryPoolRecord() (*v4api.Record, serviceResponse) {
 	if res.StatusCode != http.StatusOK {
 		errMsg := fmt.Errorf("unexpected status code %d", res.StatusCode)
 		s.log("[POOL] unexpected status code %d", res.StatusCode)
-		s.log("ERROR: Failed response from %s %s - %d:%s. Elapsed Time: %d (ms)", req.Method, url, res.StatusCode, errMsg, elapsedMS)
+		s.log("ERROR: Failed response from %s %s - %d:%s. Elapsed Time: %d (ms)", req.Method, s.url, res.StatusCode, errMsg, elapsedMS)
 		err = fmt.Errorf("received pool record response code %d", res.StatusCode)
 		return nil, serviceResponse{status: http.StatusInternalServerError, err: err}
 	}
@@ -87,14 +85,14 @@ func (s *citationsContext) queryPoolRecord() (*v4api.Record, serviceResponse) {
 
 	if decErr := decoder.Decode(&rec); decErr != nil {
 		s.log("[POOL] Decode() failed: %s", decErr.Error())
-		s.log("ERROR: Failed response from %s %s - %d:%s. Elapsed Time: %d (ms)", req.Method, url, http.StatusInternalServerError, decErr.Error(), elapsedMS)
+		s.log("ERROR: Failed response from %s %s - %d:%s. Elapsed Time: %d (ms)", req.Method, s.url, http.StatusInternalServerError, decErr.Error(), elapsedMS)
 		err = fmt.Errorf("failed to decode pool record response")
 		return nil, serviceResponse{status: http.StatusInternalServerError, err: err}
 	}
 
 	// external service success logging
 
-	s.log("Successful pool record response from %s %s. Elapsed Time: %d (ms)", req.Method, url, elapsedMS)
+	s.log("Successful pool record response from %s %s. Elapsed Time: %d (ms)", req.Method, s.url, elapsedMS)
 
 	return &rec, serviceResponse{status: http.StatusOK}
 }
