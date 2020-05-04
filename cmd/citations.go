@@ -46,7 +46,7 @@ func (s *citationsContext) handleRISRequest() (citationType, serviceResponse) {
 		return nil, resp
 	}
 
-	ris := newRisEncoder(s.itemID)
+	ris := newRisEncoder(s.svc.config.Formats.RIS, s.itemID)
 
 	for _, field := range rec.Fields {
 		if field.RISCode != "" {

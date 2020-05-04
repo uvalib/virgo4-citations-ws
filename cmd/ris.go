@@ -13,15 +13,17 @@ const RISEndTag = "ER"
 const RISLineFormat = "%s  - %s\r\n"
 
 type risEncoder struct {
-	fileName  string
-	tagValues map[string][]string
-	re        *regexp.Regexp
+	fileName    string
+	contentType string
+	tagValues   map[string][]string
+	re          *regexp.Regexp
 }
 
-func newRisEncoder(id string) *risEncoder {
+func newRisEncoder(cfg serviceConfigFormat, id string) *risEncoder {
 	r := risEncoder{}
 
-	r.fileName = fmt.Sprintf("%s.ris", id)
+	r.fileName = fmt.Sprintf("%s.%s", id, cfg.Extension)
+	r.contentType = cfg.ContentType
 	r.tagValues = make(map[string][]string)
 	r.re = regexp.MustCompile(`^([[:upper:]]|[[:digit:]]){2}$`)
 
@@ -40,7 +42,7 @@ func (r *risEncoder) addTagValue(risTag, value string) {
 }
 
 func (r *risEncoder) ContentType() string {
-	return "application/x-research-info-systems"
+	return r.contentType
 }
 
 func (r *risEncoder) FileName() string {

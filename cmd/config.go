@@ -21,10 +21,20 @@ type serviceConfigJWT struct {
 	Expiration int    `json:"expiration,omitempty"`
 }
 
+type serviceConfigFormat struct {
+	ContentType string `json:"content_type,omitempty"`
+	Extension   string `json:"extension,omitempty"`
+}
+
+type serviceConfigFormats struct {
+	RIS serviceConfigFormat `json:"ris,omitempty"`
+}
+
 type serviceConfig struct {
-	Port  string             `json:"port,omitempty"`
-	JWT   serviceConfigJWT   `json:"jwt,omitempty"`
-	Pools serviceConfigPools `json:"pools,omitempty"`
+	Port    string               `json:"port,omitempty"`
+	JWT     serviceConfigJWT     `json:"jwt,omitempty"`
+	Pools   serviceConfigPools   `json:"pools,omitempty"`
+	Formats serviceConfigFormats `json:"formats,omitempty"`
 }
 
 func getSortedJSONEnvVars() []string {
