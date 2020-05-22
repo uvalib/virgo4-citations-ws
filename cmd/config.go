@@ -31,10 +31,11 @@ type serviceConfigFormats struct {
 }
 
 type serviceConfig struct {
-	Port    string               `json:"port,omitempty"`
-	JWT     serviceConfigJWT     `json:"jwt,omitempty"`
-	Pools   serviceConfigPools   `json:"pools,omitempty"`
-	Formats serviceConfigFormats `json:"formats,omitempty"`
+	Port      string               `json:"port,omitempty"`
+	URLPrefix string               `json:"url_prefix,omitempty"`
+	JWT       serviceConfigJWT     `json:"jwt,omitempty"`
+	Pools     serviceConfigPools   `json:"pools,omitempty"`
+	Formats   serviceConfigFormats `json:"formats,omitempty"`
 }
 
 func getSortedJSONEnvVars() []string {

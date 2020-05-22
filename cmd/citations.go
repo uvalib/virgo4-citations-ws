@@ -2,6 +2,7 @@ package main
 
 import (
 	"net/http"
+	"path"
 )
 
 type citationType interface {
@@ -14,6 +15,7 @@ type citationsContext struct {
 	svc    *serviceContext
 	client *clientContext
 	url    string
+	v4url  string
 }
 
 type serviceResponse struct {
@@ -26,6 +28,10 @@ func (s *citationsContext) init(p *serviceContext, c *clientContext) {
 	s.client = c
 
 	s.url = c.ginCtx.Query("item")
+
+	if id := path.Base(s.url); id != "" && s.svc.config.URLPrefix != "" {
+		s.v4url = s.svc.config.URLPrefix + id
+	}
 }
 
 func (s *citationsContext) log(format string, args ...interface{}) {
@@ -43,7 +49,7 @@ func (s *citationsContext) handleRISRequest() (citationType, serviceResponse) {
 		return nil, resp
 	}
 
-	ris := newRisEncoder(s.svc.config.Formats.RIS, s.url)
+	ris := newRisEncoder(s.svc.config.Formats.RIS, s.v4url)
 
 	for _, field := range rec.Fields {
 		if field.RISCode != "" {

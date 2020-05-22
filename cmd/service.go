@@ -53,8 +53,8 @@ func (p *serviceContext) initVersion() {
 func (p *serviceContext) initPools() {
 	// client setup
 
-	connTimeout := timeoutWithMinimum(p.config.Pools.ConnTimeout, 15)
-	readTimeout := timeoutWithMinimum(p.config.Pools.ReadTimeout, 15)
+	connTimeout := integerWithMinimum(p.config.Pools.ConnTimeout, 1)
+	readTimeout := integerWithMinimum(p.config.Pools.ReadTimeout, 1)
 
 	poolsClient := &http.Client{
 		Timeout: time.Duration(readTimeout) * time.Second,
