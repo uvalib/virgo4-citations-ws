@@ -11,6 +11,7 @@ import (
 
 const RISTypeTag = "TY"
 const RISURLTag = "UR"
+const RISSerialNumberTag = "SN"
 const RISEndTag = "ER"
 const RISTypeGeneric = "GEN"
 const RISLineFormat = "%s  - %s\r\n"
@@ -114,8 +115,14 @@ func (r *risEncoder) multipleRecordsByType(tags []string) string {
 
 func (r *risEncoder) recordBody(b *strings.Builder, tags []string) {
 	for _, tag := range tags {
-		for _, value := range r.tagValues[tag] {
-			fmt.Fprintf(b, RISLineFormat, tag, value)
+		switch tag {
+		case RISSerialNumberTag:
+			fmt.Fprintf(b, RISLineFormat, tag, strings.Join(r.tagValues[tag], ", "))
+
+		default:
+			for _, value := range r.tagValues[tag] {
+				fmt.Fprintf(b, RISLineFormat, tag, value)
+			}
 		}
 	}
 }
