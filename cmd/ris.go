@@ -14,6 +14,7 @@ const RISTagAuthor = "AU"
 const RISTagNote = "N1"
 const RISTagKeyword = "KW"
 const RISTagURL = "UR"
+const RISTagLibrary = "DB"
 const RISTagEnd = "ER"
 
 const RISTypeGeneric = "GEN"
@@ -120,6 +121,10 @@ func (r *risEncoder) recordBody(b *strings.Builder, tags []string) {
 		// multiple URL special handling
 		case tag == RISTagURL:
 			fmt.Fprintf(b, RISLineFormat, tag, strings.Join(r.tagValues[tag], " ; "))
+
+		// first-entry-only fields
+		case tag == RISTagLibrary:
+			fmt.Fprintf(b, RISLineFormat, tag, r.tagValues[tag][0])
 
 		// repeatable fields
 		case tag == RISTagAuthor || tag == RISTagNote || tag == RISTagKeyword:
