@@ -9,10 +9,13 @@ import (
 	"strings"
 )
 
-const RISTypeTag = "TY"
-const RISURLTag = "UR"
-const RISSerialNumberTag = "SN"
-const RISEndTag = "ER"
+const RISTagType = "TY"
+const RISTagAuthor = "AU"
+const RISTagNote = "N1"
+const RISTagKeyword = "KW"
+const RISTagURL = "UR"
+const RISTagEnd = "ER"
+
 const RISTypeGeneric = "GEN"
 const RISLineFormat = "%s  - %s\r\n"
 
@@ -62,17 +65,15 @@ func (r *risEncoder) FileName() string {
 }
 
 func (r *risEncoder) FileContents() (string, error) {
-	if len(r.tagValues[RISTypeTag]) == 0 {
-		r.addTagValue(RISTypeTag, RISTypeGeneric)
+	if len(r.tagValues[RISTagType]) == 0 {
+		r.addTagValue(RISTagType, RISTypeGeneric)
 	}
 
-	if len(r.tagValues[RISURLTag]) == 0 {
-		r.addTagValue(RISURLTag, r.url)
-	}
+	r.addTagValue(RISTagNote, r.url)
 
 	tags := []string{}
 	for tag := range r.tagValues {
-		if tag != RISTypeTag {
+		if tag != RISTagType {
 			tags = append(tags, tag)
 		}
 	}
@@ -87,12 +88,12 @@ func (r *risEncoder) FileContents() (string, error) {
 func (r *risEncoder) singleRecordByJoiningTypes(tags []string) string {
 	var b strings.Builder
 
-	types := strings.Join(r.tagValues[RISTypeTag], "; ")
-	fmt.Fprintf(&b, RISLineFormat, RISTypeTag, types)
+	types := strings.Join(r.tagValues[RISTagType], "; ")
+	fmt.Fprintf(&b, RISLineFormat, RISTagType, types)
 
 	r.recordBody(&b, tags)
 
-	fmt.Fprintf(&b, RISLineFormat, RISEndTag, "")
+	fmt.Fprintf(&b, RISLineFormat, RISTagEnd, "")
 
 	return b.String()
 }
@@ -101,12 +102,12 @@ func (r *risEncoder) singleRecordByJoiningTypes(tags []string) string {
 func (r *risEncoder) multipleRecordsByType(tags []string) string {
 	var b strings.Builder
 
-	for _, typ := range r.tagValues[RISTypeTag] {
-		fmt.Fprintf(&b, RISLineFormat, RISTypeTag, typ)
+	for _, typ := range r.tagValues[RISTagType] {
+		fmt.Fprintf(&b, RISLineFormat, RISTagType, typ)
 
 		r.recordBody(&b, tags)
 
-		fmt.Fprintf(&b, RISLineFormat, RISEndTag, "")
+		fmt.Fprintf(&b, RISLineFormat, RISTagEnd, "")
 	}
 
 	return b.String()
@@ -115,14 +116,20 @@ func (r *risEncoder) multipleRecordsByType(tags []string) string {
 
 func (r *risEncoder) recordBody(b *strings.Builder, tags []string) {
 	for _, tag := range tags {
-		switch tag {
-		case RISSerialNumberTag:
-			fmt.Fprintf(b, RISLineFormat, tag, strings.Join(r.tagValues[tag], ", "))
+		switch {
+		// multiple URL special handling
+		case tag == RISTagURL:
+			fmt.Fprintf(b, RISLineFormat, tag, strings.Join(r.tagValues[tag], " ; "))
 
-		default:
+		// repeatable fields
+		case tag == RISTagAuthor || tag == RISTagNote || tag == RISTagKeyword:
 			for _, value := range r.tagValues[tag] {
 				fmt.Fprintf(b, RISLineFormat, tag, value)
 			}
+
+		// simple concatenation of any other possibly duplicated fields
+		default:
+			fmt.Fprintf(b, RISLineFormat, tag, strings.Join(r.tagValues[tag], ", "))
 		}
 	}
 }
