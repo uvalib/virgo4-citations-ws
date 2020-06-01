@@ -11,6 +11,10 @@ import (
 
 const RISTagType = "TY"
 const RISTagAuthor = "AU"
+const RISTagAuthorPrimary = "A1"
+const RISTagAuthorSecondary = "A2"
+const RISTagAuthorTertiary = "A3"
+const RISTagAuthorSubsidiary = "A4"
 const RISTagNote = "N1"
 const RISTagKeyword = "KW"
 const RISTagURL = "UR"
@@ -127,7 +131,13 @@ func (r *risEncoder) recordBody(b *strings.Builder, tags []string) {
 			fmt.Fprintf(b, RISLineFormat, tag, r.tagValues[tag][0])
 
 		// repeatable fields
-		case tag == RISTagAuthor || tag == RISTagNote || tag == RISTagKeyword:
+		case tag == RISTagAuthor ||
+			tag == RISTagAuthorPrimary ||
+			tag == RISTagAuthorSecondary ||
+			tag == RISTagAuthorTertiary ||
+			tag == RISTagAuthorSubsidiary ||
+			tag == RISTagNote ||
+			tag == RISTagKeyword:
 			for _, value := range r.tagValues[tag] {
 				fmt.Fprintf(b, RISLineFormat, tag, value)
 			}
