@@ -9,20 +9,31 @@ import (
 	"strings"
 )
 
-const RISTagType = "TY"
-const RISTagAuthor = "AU"
-const RISTagAuthorPrimary = "A1"
-const RISTagAuthorSecondary = "A2"
-const RISTagAuthorTertiary = "A3"
-const RISTagAuthorSubsidiary = "A4"
-const RISTagNote = "N1"
-const RISTagKeyword = "KW"
-const RISTagURL = "UR"
-const RISTagLibrary = "DB"
-const RISTagEnd = "ER"
+// required tags
+const risTagType = "TY"
+const risTagEnd = "ER"
 
-const RISTypeGeneric = "GEN"
-const RISLineFormat = "%s  - %s\r\n"
+// special handling tags
+const risTagURL = "UR"
+const risTagLibrary = "DB"
+
+// repeatable tags
+const risTagAuthor = "AU"
+const risTagAuthorPrimary = "A1"
+const risTagAuthorSecondary = "A2"
+const risTagAuthorTertiary = "A3"
+const risTagAuthorSubsidiary = "A4"
+const risTagKeyword = "KW"
+
+// allowed multi-line tags
+const risTagAbstract = "AB"
+const risTagNote1 = "N1"
+const risTagNote2 = "N2"
+
+// misc definitions
+const risTypeGeneric = "GEN"
+const risLineEnding = "\r\n"
+const risLineFormat = "%s  - %s" + risLineEnding
 
 type risEncoder struct {
 	url         string
@@ -70,15 +81,15 @@ func (r *risEncoder) FileName() string {
 }
 
 func (r *risEncoder) FileContents() (string, error) {
-	if len(r.tagValues[RISTagType]) == 0 {
-		r.addTagValue(RISTagType, RISTypeGeneric)
+	if len(r.tagValues[risTagType]) == 0 {
+		r.addTagValue(risTagType, risTypeGeneric)
 	}
 
-	r.addTagValue(RISTagNote, r.url)
+	r.addTagValue(risTagNote1, r.url)
 
 	tags := []string{}
 	for tag := range r.tagValues {
-		if tag != RISTagType {
+		if tag != risTagType {
 			tags = append(tags, tag)
 		}
 	}
@@ -90,15 +101,44 @@ func (r *risEncoder) FileContents() (string, error) {
 	return data, nil
 }
 
+func (r *risEncoder) isRepeatableTag(tag string) bool {
+	switch tag {
+	case risTagAuthor:
+	case risTagAuthorPrimary:
+	case risTagAuthorSecondary:
+	case risTagAuthorTertiary:
+	case risTagAuthorSubsidiary:
+	case risTagNote1:
+	case risTagKeyword:
+
+	default:
+		return false
+	}
+
+	return true
+}
+
+func (r *risEncoder) isAllowedMultilineTag(tag string) bool {
+	switch tag {
+	case risTagAbstract:
+	case risTagNote2:
+
+	default:
+		return false
+	}
+
+	return true
+}
+
 func (r *risEncoder) singleRecordByJoiningTypes(tags []string) string {
 	var b strings.Builder
 
-	types := strings.Join(r.tagValues[RISTagType], "; ")
-	fmt.Fprintf(&b, RISLineFormat, RISTagType, types)
+	types := strings.Join(r.tagValues[risTagType], "; ")
+	fmt.Fprintf(&b, risLineFormat, risTagType, types)
 
 	r.recordBody(&b, tags)
 
-	fmt.Fprintf(&b, RISLineFormat, RISTagEnd, "")
+	fmt.Fprintf(&b, risLineFormat, risTagEnd, "")
 
 	return b.String()
 }
@@ -107,12 +147,12 @@ func (r *risEncoder) singleRecordByJoiningTypes(tags []string) string {
 func (r *risEncoder) multipleRecordsByType(tags []string) string {
 	var b strings.Builder
 
-	for _, typ := range r.tagValues[RISTagType] {
-		fmt.Fprintf(&b, RISLineFormat, RISTagType, typ)
+	for _, typ := range r.tagValues[risTagType] {
+		fmt.Fprintf(&b, risLineFormat, risTagType, typ)
 
 		r.recordBody(&b, tags)
 
-		fmt.Fprintf(&b, RISLineFormat, RISTagEnd, "")
+		fmt.Fprintf(&b, risLineFormat, risTagEnd, "")
 	}
 
 	return b.String()
@@ -123,28 +163,38 @@ func (r *risEncoder) recordBody(b *strings.Builder, tags []string) {
 	for _, tag := range tags {
 		switch {
 		// multiple URL special handling
-		case tag == RISTagURL:
-			fmt.Fprintf(b, RISLineFormat, tag, strings.Join(r.tagValues[tag], " ; "))
+		case tag == risTagURL:
+			fmt.Fprintf(b, risLineFormat, tag, strings.Join(r.tagValues[tag], " ; "))
 
-		// first-entry-only fields
-		case tag == RISTagLibrary:
-			fmt.Fprintf(b, RISLineFormat, tag, r.tagValues[tag][0])
+		// first-entry-only tags
+		case tag == risTagLibrary:
+			fmt.Fprintf(b, risLineFormat, tag, r.tagValues[tag][0])
 
-		// repeatable fields
-		case tag == RISTagAuthor ||
-			tag == RISTagAuthorPrimary ||
-			tag == RISTagAuthorSecondary ||
-			tag == RISTagAuthorTertiary ||
-			tag == RISTagAuthorSubsidiary ||
-			tag == RISTagNote ||
-			tag == RISTagKeyword:
-			for _, value := range r.tagValues[tag] {
-				fmt.Fprintf(b, RISLineFormat, tag, value)
+		// allowed multi-line tags
+		case r.isAllowedMultilineTag(tag):
+			// join any duplicates with this tag, in case it was repeated
+			data := strings.Join(r.tagValues[tag], "\n")
+
+			// clean up each line of data
+			var lines []string
+			for _, line := range strings.Split(data, "\n") {
+				trimmed := strings.TrimSpace(line)
+				if trimmed != "" {
+					lines = append(lines, trimmed)
+				}
 			}
 
-		// simple concatenation of any other possibly duplicated fields
+			fmt.Fprintf(b, risLineFormat, tag, strings.Join(lines, risLineEnding))
+
+		// repeatable tags
+		case r.isRepeatableTag(tag):
+			for _, value := range r.tagValues[tag] {
+				fmt.Fprintf(b, risLineFormat, tag, value)
+			}
+
+		// simple concatenation of any other possibly duplicated tags
 		default:
-			fmt.Fprintf(b, RISLineFormat, tag, strings.Join(r.tagValues[tag], ", "))
+			fmt.Fprintf(b, risLineFormat, tag, strings.Join(r.tagValues[tag], ", "))
 		}
 	}
 }
