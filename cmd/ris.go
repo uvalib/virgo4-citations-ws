@@ -22,13 +22,16 @@ const risTagEnd = "ER"
 const risTagKeyword = "KW"
 const risTagLibrary = "DP"
 const risTagNote = "N1"
+const risTagPeriodicalName = "J2"
 const risTagType = "TY"
 const risTagURL = "UR"
 
 // misc definitions
 const risTypeGeneric = "GEN"
+const risTruncateLength = 255
 const risLineEnding = "\r\n"
 const risLineFormat = "%s  - %s" + risLineEnding
+const risTagPattern = `^([[:upper:]]|[[:digit:]]){2}$`
 
 type tagValueMap map[string][]string
 
@@ -48,7 +51,7 @@ func newRisEncoder(cfg serviceConfigFormat, url string) *risEncoder {
 	r.extension = cfg.Extension
 	r.contentType = cfg.ContentType
 	r.tagValues = make(tagValueMap)
-	r.re = regexp.MustCompile(`^([[:upper:]]|[[:digit:]]){2}$`)
+	r.re = regexp.MustCompile(risTagPattern)
 	r.policy = bluemonday.StrictPolicy()
 
 	return &r
@@ -79,35 +82,13 @@ func (r *risEncoder) FileName() string {
 	return filename
 }
 
-func (r *risEncoder) FileContents() (string, error) {
-	if len(r.tagValues[risTagType]) == 0 {
-		r.addTagValue(risTagType, risTypeGeneric)
-	}
-
-	r.addTagValue(risTagNote, r.url)
-
-	tags := []string{}
-	for tag := range r.tagValues {
-		if tag != risTagType {
-			tags = append(tags, tag)
-		}
-	}
-
-	sort.Strings(tags)
-
-	data := r.singleRecordByJoiningTypes(tags)
-
-	return data, nil
-}
-
-func (r *risEncoder) isRepeatableTag(tag string) bool {
+func (r *risEncoder) isAuthorOrKeywordTag(tag string) bool {
 	switch tag {
 	case risTagAuthor:
 	case risTagAuthorPrimary:
 	case risTagAuthorSecondary:
 	case risTagAuthorTertiary:
 	case risTagAuthorSubsidiary:
-	case risTagNote:
 	case risTagKeyword:
 
 	default:
@@ -115,6 +96,34 @@ func (r *risEncoder) isRepeatableTag(tag string) bool {
 	}
 
 	return true
+}
+
+func (r *risEncoder) isRepeatableTag(tag string) bool {
+	switch {
+	case r.isAuthorOrKeywordTag(tag):
+	case tag == risTagNote:
+
+	default:
+		return false
+	}
+
+	return true
+}
+
+func (r *risEncoder) isNonAsteriskTag(tag string) bool {
+	switch {
+	case r.isAuthorOrKeywordTag(tag):
+	case tag == risTagPeriodicalName:
+
+	default:
+		return false
+	}
+
+	return true
+}
+
+func (r *risEncoder) isLimitedLengthTag(tag string) bool {
+	return r.isAuthorOrKeywordTag(tag)
 }
 
 func (r *risEncoder) cleanString(val string) string {
@@ -151,19 +160,58 @@ func (r *risEncoder) cleanString(val string) string {
 	return cleaned
 }
 
-func (r *risEncoder) getTagValue(val string) string {
+func (r *risEncoder) getTagValue(tag, val string) string {
 	value := strings.ReplaceAll(val, `\n`, "\n")
 
 	// clean up each line of data
 	var lines []string
 	for _, line := range strings.Split(value, "\n") {
 		cleaned := r.cleanString(line)
+
+		if r.isNonAsteriskTag(tag) == true {
+			cleaned = strings.ReplaceAll(cleaned, `*`, `#`)
+		}
+
+		if r.isLimitedLengthTag(tag) == true {
+			if len(cleaned) > risTruncateLength {
+				cleaned = cleaned[0:risTruncateLength]
+			}
+		}
+
 		if cleaned != "" {
 			lines = append(lines, cleaned)
 		}
 	}
 
 	return strings.Join(lines, risLineEnding)
+}
+
+func (r *risEncoder) FileContents() (string, error) {
+	if len(r.tagValues[risTagType]) == 0 {
+		r.addTagValue(risTagType, risTypeGeneric)
+	}
+
+	r.addTagValue(risTagNote, r.url)
+
+	tags := []string{}
+	for tag := range r.tagValues {
+		if tag != risTagType {
+			tags = append(tags, tag)
+		}
+	}
+
+	sort.Strings(tags)
+
+	var b strings.Builder
+
+	// use first type as type
+	fmt.Fprintf(&b, risLineFormat, risTagType, r.tagValues[risTagType][0])
+
+	r.recordBody(&b, tags)
+
+	fmt.Fprintf(&b, risLineFormat, risTagEnd, "")
+
+	return b.String(), nil
 }
 
 func (r *risEncoder) recordBody(b *strings.Builder, tags []string) {
@@ -184,28 +232,16 @@ func (r *risEncoder) recordBody(b *strings.Builder, tags []string) {
 		case tag == risTagLibrary:
 			merged[tag] = []string{r.tagValues[tag][0]}
 
+		// straightforward joining of separate values
 		default:
-			merged[tag] = []string{strings.Join(r.tagValues[tag], ",")}
+			merged[tag] = []string{strings.Join(r.tagValues[tag], ", ")}
 		}
 	}
 
 	// second pass: write cleaned tag values one by one
 	for _, tag := range tags {
 		for _, val := range merged[tag] {
-			fmt.Fprintf(b, risLineFormat, tag, r.getTagValue(val))
+			fmt.Fprintf(b, risLineFormat, tag, r.getTagValue(tag, val))
 		}
 	}
-}
-
-func (r *risEncoder) singleRecordByJoiningTypes(tags []string) string {
-	var b strings.Builder
-
-	// use first type as type
-	fmt.Fprintf(&b, risLineFormat, risTagType, r.tagValues[risTagType][0])
-
-	r.recordBody(&b, tags)
-
-	fmt.Fprintf(&b, risLineFormat, risTagEnd, "")
-
-	return b.String()
 }
