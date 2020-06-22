@@ -35,7 +35,7 @@ func (s *citationsContext) queryPoolRecord() (*v4api.Record, serviceResponse) {
 		return nil, serviceResponse{status: http.StatusBadRequest, err: err}
 	}
 
-	req, reqErr := http.NewRequest("GET", s.url, nil)
+	req, reqErr := http.NewRequest("GET", s.url+"?ris=1", nil)
 	if reqErr != nil {
 		s.log("[POOL] NewRequest() failed: %s", reqErr.Error())
 		err = fmt.Errorf("failed to create pool record request")
