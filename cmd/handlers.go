@@ -83,7 +83,7 @@ func (s *citationsContext) serveCitation(citation citationType) {
 	fileName := citation.FileName()
 
 	extraHeaders := map[string]string{
-		"Content-Disposition:": fmt.Sprintf(`attachment; filename="%s"`, fileName),
+		"Content-Disposition": fmt.Sprintf(`attachment; filename="%s"`, fileName),
 	}
 
 	c.DataFromReader(http.StatusOK, contentLength, contentType, reader, extraHeaders)
