@@ -3,9 +3,7 @@ package main
 import (
 	"fmt"
 	"html"
-	"log"
 	"path"
-	"regexp"
 	"sort"
 	"strings"
 
@@ -31,7 +29,6 @@ const risTypeGeneric = "GEN"
 const risTruncateLength = 255
 const risLineEnding = "\r\n"
 const risLineFormat = "%s  - %s" + risLineEnding
-const risTagPattern = `^([[:upper:]]|[[:digit:]]){2}$`
 
 type tagValueMap map[string][]string
 
@@ -40,9 +37,11 @@ type risEncoder struct {
 	extension   string
 	contentType string
 	tagValues   tagValueMap
-	re          *regexp.Regexp
 	policy      *bluemonday.Policy
 }
+
+var risPartsMap map[string][]string
+var risTypesMap map[string]string
 
 func newRisEncoder(cfg serviceConfigFormat, url string) *risEncoder {
 	r := risEncoder{}
@@ -51,19 +50,38 @@ func newRisEncoder(cfg serviceConfigFormat, url string) *risEncoder {
 	r.extension = cfg.Extension
 	r.contentType = cfg.ContentType
 	r.tagValues = make(tagValueMap)
-	r.re = regexp.MustCompile(risTagPattern)
 	r.policy = bluemonday.StrictPolicy()
 
 	return &r
 }
 
+func (r *risEncoder) populateCitation(parts citationParts) {
+	for part, values := range parts {
+		risCodes := risPartsMap[part]
+
+		if len(risCodes) == 0 {
+			continue
+		}
+
+		for _, risCode := range risCodes {
+			for _, value := range values {
+				risValue := value
+
+				if risCode == risTagType {
+					risValue = risTypesMap[value]
+					if risValue == "" {
+						risValue = risTypeGeneric
+					}
+				}
+
+				r.addTagValue(risCode, risValue)
+			}
+		}
+	}
+}
+
 func (r *risEncoder) addTagValue(risTag, value string) {
 	tag := strings.ToUpper(risTag)
-
-	if r.re.MatchString(tag) == false {
-		log.Printf("skipping invalid RIS tag: [%s]", tag)
-		return
-	}
 
 	r.tagValues[tag] = append(r.tagValues[tag], value)
 }
@@ -244,4 +262,53 @@ func (r *risEncoder) recordBody(b *strings.Builder, tags []string) {
 			fmt.Fprintf(b, risLineFormat, tag, r.getTagValue(tag, val))
 		}
 	}
+}
+
+func init() {
+	// mapping of citation parts to RIS code(s)
+	risPartsMap = make(map[string][]string)
+
+	risPartsMap["abstract"] = []string{"AB"}
+	risPartsMap["author"] = []string{"AU"}
+	risPartsMap["call_number"] = []string{"CN"}
+	risPartsMap["content_provider"] = []string{"DB"}
+	risPartsMap["description"] = []string{"N1"}
+	risPartsMap["doi"] = []string{"DO"}
+	risPartsMap["format"] = []string{"TY"}
+	risPartsMap["full_text_url"] = []string{"L2"}
+	risPartsMap["genre"] = []string{"M3"}
+	risPartsMap["id"] = []string{"ID"}
+	risPartsMap["issue"] = []string{"IS"}
+	risPartsMap["journal"] = []string{"T2"}
+	risPartsMap["language"] = []string{"LA"}
+	risPartsMap["library"] = []string{"DP"}
+	risPartsMap["location"] = []string{"AN"}
+	risPartsMap["published_location"] = []string{"CY"}
+	risPartsMap["published_date"] = []string{"DA", "PY"}
+	risPartsMap["publisher"] = []string{"PB"}
+	risPartsMap["rights"] = []string{"C4"}
+	risPartsMap["serial_number"] = []string{"SN"}
+	risPartsMap["series"] = []string{"T2"}
+	risPartsMap["subject"] = []string{"KW"}
+	risPartsMap["subtitle"] = []string{"T2"}
+	risPartsMap["title"] = []string{"TI"}
+	risPartsMap["url"] = []string{"UR"}
+	risPartsMap["volume"] = []string{"VL"}
+
+	// mapping of citation formats (citation part "format") to RIS type
+	risTypesMap = make(map[string]string)
+
+	risTypesMap["art"] = "ART"
+	risTypesMap["article"] = "JOUR"
+	risTypesMap["book"] = "BOOK"
+	risTypesMap["generic"] = "GEN"
+	risTypesMap["government_document"] = "GOVDOC"
+	risTypesMap["journal"] = "JOUR"
+	risTypesMap["manuscript"] = "MANSCPT"
+	risTypesMap["map"] = "MAP"
+	risTypesMap["music"] = "MUSIC"
+	risTypesMap["news"] = "NEWS"
+	risTypesMap["sound"] = "SOUND"
+	risTypesMap["thesis"] = "THES"
+	risTypesMap["video"] = "VIDEO"
 }

@@ -11,11 +11,14 @@ type citationType interface {
 	FileContents() (string, error)
 }
 
+type citationParts map[string][]string
+
 type citationsContext struct {
 	svc    *serviceContext
 	client *clientContext
 	url    string
 	v4url  string
+	parts  citationParts
 }
 
 type serviceResponse struct {
@@ -42,8 +45,26 @@ func (s *citationsContext) err(format string, args ...interface{}) {
 	s.client.err(format, args...)
 }
 
-func (s *citationsContext) handleRISRequest() (citationType, serviceResponse) {
+func (s *citationsContext) collectCitationParts() serviceResponse {
 	rec, resp := s.queryPoolRecord()
+
+	if resp.err != nil {
+		return resp
+	}
+
+	s.parts = make(citationParts)
+
+	for _, field := range rec.Fields {
+		if field.CitationPart != "" && field.Value != "" {
+			s.parts[field.CitationPart] = append(s.parts[field.CitationPart], field.Value)
+		}
+	}
+
+	return serviceResponse{status: http.StatusOK}
+}
+
+func (s *citationsContext) handleRISRequest() (citationType, serviceResponse) {
+	resp := s.collectCitationParts()
 
 	if resp.err != nil {
 		return nil, resp
@@ -51,11 +72,7 @@ func (s *citationsContext) handleRISRequest() (citationType, serviceResponse) {
 
 	ris := newRisEncoder(s.svc.config.Formats.RIS, s.v4url)
 
-	for _, field := range rec.Fields {
-		if field.RISCode != "" {
-			ris.addTagValue(field.RISCode, field.Value)
-		}
-	}
+	ris.populateCitation(s.parts)
 
 	return ris, serviceResponse{status: http.StatusOK}
 }

@@ -35,7 +35,8 @@ func (s *citationsContext) queryPoolRecord() (*v4api.Record, serviceResponse) {
 		return nil, serviceResponse{status: http.StatusBadRequest, err: err}
 	}
 
-	req, reqErr := http.NewRequest("GET", s.url+"?ris=1", nil)
+	// the citation query parameter is only used by the solr pool, and is not relevant to other pools
+	req, reqErr := http.NewRequest("GET", s.url+"?citation=1", nil)
 	if reqErr != nil {
 		s.log("[POOL] NewRequest() failed: %s", reqErr.Error())
 		err = fmt.Errorf("failed to create pool record request")
