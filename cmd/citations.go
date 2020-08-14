@@ -41,6 +41,10 @@ func (s *citationsContext) log(format string, args ...interface{}) {
 	s.client.log(format, args...)
 }
 
+func (s *citationsContext) warn(format string, args ...interface{}) {
+	s.client.warn(format, args...)
+}
+
 func (s *citationsContext) err(format string, args ...interface{}) {
 	s.client.err(format, args...)
 }

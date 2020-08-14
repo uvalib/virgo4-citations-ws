@@ -14,6 +14,12 @@ import (
 func (s *citationsContext) queryPoolRecord() (*v4api.Record, serviceResponse) {
 	var err error
 
+	if s.url == "" {
+		err = fmt.Errorf("missing or invalid url")
+		s.warn(err.Error())
+		return nil, serviceResponse{status: http.StatusBadRequest, err: err}
+	}
+
 	// create a short-lived single-use token, (ab)using IsUVA claim to make
 	// sure we get all possible info from the pool.
 
@@ -25,12 +31,6 @@ func (s *citationsContext) queryPoolRecord() (*v4api.Record, serviceResponse) {
 	token, jwtErr := v4jwt.Mint(claims, time.Duration(s.svc.config.JWT.Expiration)*time.Minute, s.svc.config.JWT.Key)
 	if jwtErr != nil {
 		err = fmt.Errorf("failed to mint JWT: %s", jwtErr.Error())
-		s.err(err.Error())
-		return nil, serviceResponse{status: http.StatusBadRequest, err: err}
-	}
-
-	if s.url == "" {
-		err = fmt.Errorf("missing or invalid url")
 		s.err(err.Error())
 		return nil, serviceResponse{status: http.StatusBadRequest, err: err}
 	}

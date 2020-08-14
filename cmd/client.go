@@ -95,6 +95,10 @@ func (c *clientContext) log(format string, args ...interface{}) {
 	c.printf("", format, args...)
 }
 
+func (c *clientContext) warn(format string, args ...interface{}) {
+	c.printf("WARNING:", format, args...)
+}
+
 func (c *clientContext) err(format string, args ...interface{}) {
 	c.printf("ERROR:", format, args...)
 }

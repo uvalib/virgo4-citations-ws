@@ -131,6 +131,11 @@ dep:
 	echo "[DEP] $(GOMOD) verify" ; \
 	$(GOMOD) verify
 
+DEP: goproxy-direct dep
+
+goproxy-direct:
+	$(eval GOPROXY = direct)
+
 check-static:
 	@ \
 	echo "[CHECK] static checks" ; \
