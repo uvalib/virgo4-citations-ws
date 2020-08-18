@@ -6,6 +6,8 @@ import (
 )
 
 type citationType interface {
+	Init(string)
+	Populate(citationParts) error
 	ContentType() string
 	FileName() string
 	FileContents() (string, error)
@@ -67,16 +69,18 @@ func (s *citationsContext) collectCitationParts() serviceResponse {
 	return serviceResponse{status: http.StatusOK}
 }
 
-func (s *citationsContext) handleRISRequest() (citationType, serviceResponse) {
+func (s *citationsContext) handleCitationRequest(fmt citationType) serviceResponse {
 	resp := s.collectCitationParts()
 
 	if resp.err != nil {
-		return nil, resp
+		return resp
 	}
 
-	ris := newRisEncoder(s.svc.config.Formats.RIS, s.v4url)
+	fmt.Init(s.v4url)
 
-	ris.populateCitation(s.parts)
+	if err := fmt.Populate(s.parts); err != nil {
+		return serviceResponse{status: http.StatusInternalServerError, err: err}
+	}
 
-	return ris, serviceResponse{status: http.StatusOK}
+	return serviceResponse{status: http.StatusOK}
 }

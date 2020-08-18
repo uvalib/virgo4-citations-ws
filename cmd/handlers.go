@@ -8,7 +8,7 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-func (p *serviceContext) risHandler(c *gin.Context) {
+func (p *serviceContext) citationHandler(c *gin.Context, fmt citationType) {
 	cl := clientContext{}
 	cl.init(p, c)
 
@@ -16,7 +16,7 @@ func (p *serviceContext) risHandler(c *gin.Context) {
 	s.init(p, &cl)
 
 	cl.logRequest()
-	ris, resp := s.handleRISRequest()
+	resp := s.handleCitationRequest(fmt)
 	cl.logResponse(resp)
 
 	if resp.err != nil {
@@ -24,7 +24,23 @@ func (p *serviceContext) risHandler(c *gin.Context) {
 		return
 	}
 
-	s.serveCitation(ris)
+	s.serveCitation(fmt)
+}
+
+func (p *serviceContext) apaHandler(c *gin.Context) {
+	p.citationHandler(c, newApaEncoder(p.config.Formats.APA))
+}
+
+func (p *serviceContext) cmsHandler(c *gin.Context) {
+	p.citationHandler(c, newCmsEncoder(p.config.Formats.CMS))
+}
+
+func (p *serviceContext) mlaHandler(c *gin.Context) {
+	p.citationHandler(c, newMlaEncoder(p.config.Formats.MLA))
+}
+
+func (p *serviceContext) risHandler(c *gin.Context) {
+	p.citationHandler(c, newRisEncoder(p.config.Formats.RIS))
 }
 
 func (p *serviceContext) ignoreHandler(c *gin.Context) {
@@ -72,7 +88,9 @@ func (s *citationsContext) serveCitation(citation citationType) {
 		return
 	}
 
-	if s.client.opts.inline == true {
+	fileName := citation.FileName()
+
+	if s.client.opts.inline == true || fileName == "" {
 		c.String(http.StatusOK, data)
 		return
 	}
@@ -80,7 +98,6 @@ func (s *citationsContext) serveCitation(citation citationType) {
 	reader := strings.NewReader(data)
 	contentLength := int64(len(data))
 	contentType := citation.ContentType()
-	fileName := citation.FileName()
 
 	extraHeaders := map[string]string{
 		"Content-Disposition": fmt.Sprintf(`attachment; filename="%s"`, fileName),

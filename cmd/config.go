@@ -27,6 +27,9 @@ type serviceConfigFormat struct {
 }
 
 type serviceConfigFormats struct {
+	APA serviceConfigFormat `json:"apa,omitempty"`
+	CMS serviceConfigFormat `json:"cms,omitempty"`
+	MLA serviceConfigFormat `json:"mla,omitempty"`
 	RIS serviceConfigFormat `json:"ris,omitempty"`
 }
 

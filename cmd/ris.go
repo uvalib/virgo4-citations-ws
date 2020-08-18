@@ -43,19 +43,22 @@ type risEncoder struct {
 var risPartsMap map[string][]string
 var risTypesMap map[string]string
 
-func newRisEncoder(cfg serviceConfigFormat, url string) *risEncoder {
-	r := risEncoder{}
+func newRisEncoder(cfg serviceConfigFormat) *risEncoder {
+	e := risEncoder{}
 
-	r.url = url
-	r.extension = cfg.Extension
-	r.contentType = cfg.ContentType
-	r.tagValues = make(tagValueMap)
-	r.policy = bluemonday.StrictPolicy()
+	e.extension = cfg.Extension
+	e.contentType = cfg.ContentType
+	e.tagValues = make(tagValueMap)
+	e.policy = bluemonday.StrictPolicy()
 
-	return &r
+	return &e
 }
 
-func (r *risEncoder) populateCitation(parts citationParts) {
+func (e *risEncoder) Init(url string) {
+	e.url = url
+}
+
+func (e *risEncoder) Populate(parts citationParts) error {
 	for part, values := range parts {
 		risCodes := risPartsMap[part]
 
@@ -74,33 +77,35 @@ func (r *risEncoder) populateCitation(parts citationParts) {
 					}
 				}
 
-				r.addTagValue(risCode, risValue)
+				e.addTagValue(risCode, risValue)
 			}
 		}
 	}
+
+	return nil
 }
 
-func (r *risEncoder) addTagValue(risTag, value string) {
+func (e *risEncoder) addTagValue(risTag, value string) {
 	tag := strings.ToUpper(risTag)
 
-	r.tagValues[tag] = append(r.tagValues[tag], value)
+	e.tagValues[tag] = append(e.tagValues[tag], value)
 }
 
-func (r *risEncoder) ContentType() string {
-	return r.contentType
+func (e *risEncoder) ContentType() string {
+	return e.contentType
 }
 
-func (r *risEncoder) FileName() string {
-	filename := path.Base(r.url)
+func (e *risEncoder) FileName() string {
+	filename := path.Base(e.url)
 
-	if r.extension != "" {
-		filename += "." + r.extension
+	if e.extension != "" {
+		filename += "." + e.extension
 	}
 
 	return filename
 }
 
-func (r *risEncoder) isAuthorOrKeywordTag(tag string) bool {
+func (e *risEncoder) isAuthorOrKeywordTag(tag string) bool {
 	switch tag {
 	case risTagAuthor:
 	case risTagAuthorPrimary:
@@ -116,9 +121,9 @@ func (r *risEncoder) isAuthorOrKeywordTag(tag string) bool {
 	return true
 }
 
-func (r *risEncoder) isRepeatableTag(tag string) bool {
+func (e *risEncoder) isRepeatableTag(tag string) bool {
 	switch {
-	case r.isAuthorOrKeywordTag(tag):
+	case e.isAuthorOrKeywordTag(tag):
 	case tag == risTagNote:
 
 	default:
@@ -128,9 +133,9 @@ func (r *risEncoder) isRepeatableTag(tag string) bool {
 	return true
 }
 
-func (r *risEncoder) isNonAsteriskTag(tag string) bool {
+func (e *risEncoder) isNonAsteriskTag(tag string) bool {
 	switch {
-	case r.isAuthorOrKeywordTag(tag):
+	case e.isAuthorOrKeywordTag(tag):
 	case tag == risTagPeriodicalName:
 
 	default:
@@ -140,11 +145,11 @@ func (r *risEncoder) isNonAsteriskTag(tag string) bool {
 	return true
 }
 
-func (r *risEncoder) isLimitedLengthTag(tag string) bool {
-	return r.isAuthorOrKeywordTag(tag)
+func (e *risEncoder) isLimitedLengthTag(tag string) bool {
+	return e.isAuthorOrKeywordTag(tag)
 }
 
-func (r *risEncoder) cleanString(val string) string {
+func (e *risEncoder) cleanString(val string) string {
 	cleaned := val
 
 	cleaned = strings.ReplaceAll(cleaned, `►`, `>`)
@@ -171,26 +176,26 @@ func (r *risEncoder) cleanString(val string) string {
 	cleaned = strings.ReplaceAll(cleaned, `«`, `"`)
 	cleaned = strings.ReplaceAll(cleaned, `»`, `"`)
 
-	cleaned = r.policy.Sanitize(cleaned)
+	cleaned = e.policy.Sanitize(cleaned)
 	cleaned = html.UnescapeString(cleaned)
 	cleaned = strings.TrimSpace(cleaned)
 
 	return cleaned
 }
 
-func (r *risEncoder) getTagValue(tag, val string) string {
+func (e *risEncoder) getTagValue(tag, val string) string {
 	value := strings.ReplaceAll(val, `\n`, "\n")
 
 	// clean up each line of data
 	var lines []string
 	for _, line := range strings.Split(value, "\n") {
-		cleaned := r.cleanString(line)
+		cleaned := e.cleanString(line)
 
-		if r.isNonAsteriskTag(tag) == true {
+		if e.isNonAsteriskTag(tag) == true {
 			cleaned = strings.ReplaceAll(cleaned, `*`, `#`)
 		}
 
-		if r.isLimitedLengthTag(tag) == true {
+		if e.isLimitedLengthTag(tag) == true {
 			if len(cleaned) > risTruncateLength {
 				cleaned = cleaned[0:risTruncateLength]
 			}
@@ -204,15 +209,15 @@ func (r *risEncoder) getTagValue(tag, val string) string {
 	return strings.Join(lines, risLineEnding)
 }
 
-func (r *risEncoder) FileContents() (string, error) {
-	if len(r.tagValues[risTagType]) == 0 {
-		r.addTagValue(risTagType, risTypeGeneric)
+func (e *risEncoder) FileContents() (string, error) {
+	if len(e.tagValues[risTagType]) == 0 {
+		e.addTagValue(risTagType, risTypeGeneric)
 	}
 
-	r.addTagValue(risTagNote, r.url)
+	e.addTagValue(risTagNote, e.url)
 
 	tags := []string{}
-	for tag := range r.tagValues {
+	for tag := range e.tagValues {
 		if tag != risTagType {
 			tags = append(tags, tag)
 		}
@@ -223,43 +228,43 @@ func (r *risEncoder) FileContents() (string, error) {
 	var b strings.Builder
 
 	// use first type as type
-	fmt.Fprintf(&b, risLineFormat, risTagType, r.tagValues[risTagType][0])
+	fmt.Fprintf(&b, risLineFormat, risTagType, e.tagValues[risTagType][0])
 
-	r.recordBody(&b, tags)
+	e.recordBody(&b, tags)
 
 	fmt.Fprintf(&b, risLineFormat, risTagEnd, "")
 
 	return b.String(), nil
 }
 
-func (r *risEncoder) recordBody(b *strings.Builder, tags []string) {
+func (e *risEncoder) recordBody(b *strings.Builder, tags []string) {
 	merged := make(tagValueMap)
 
 	// first pass: merge tags that are not repeatable
 	for _, tag := range tags {
 		switch {
 		// preserve individual tag values for repeatable tags
-		case r.isRepeatableTag(tag):
-			merged[tag] = r.tagValues[tag]
+		case e.isRepeatableTag(tag):
+			merged[tag] = e.tagValues[tag]
 
 		// special-case URL joining (to prevent the separator from being treated as part of the URL)
 		case tag == risTagURL:
-			merged[tag] = []string{strings.Join(r.tagValues[tag], " ; ")}
+			merged[tag] = []string{strings.Join(e.tagValues[tag], " ; ")}
 
 		// tags for which we want to use the first occurrence only
 		case tag == risTagLibrary:
-			merged[tag] = []string{r.tagValues[tag][0]}
+			merged[tag] = []string{e.tagValues[tag][0]}
 
 		// straightforward joining of separate values
 		default:
-			merged[tag] = []string{strings.Join(r.tagValues[tag], ", ")}
+			merged[tag] = []string{strings.Join(e.tagValues[tag], ", ")}
 		}
 	}
 
 	// second pass: write cleaned tag values one by one
 	for _, tag := range tags {
 		for _, val := range merged[tag] {
-			fmt.Fprintf(b, risLineFormat, tag, r.getTagValue(tag, val))
+			fmt.Fprintf(b, risLineFormat, tag, e.getTagValue(tag, val))
 		}
 	}
 }
