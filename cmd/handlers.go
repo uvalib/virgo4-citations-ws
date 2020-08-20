@@ -43,7 +43,7 @@ func (p *serviceContext) risHandler(c *gin.Context) {
 	p.citationHandler(c, newRisEncoder(p.config.Formats.RIS))
 }
 
-func (p *serviceContext) zoteroHandler(c *gin.Context) {
+func (p *serviceContext) unapiHandler(c *gin.Context) {
 	id := c.Query("id")
 	format := c.Query("format")
 
