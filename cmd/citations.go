@@ -32,7 +32,11 @@ func (s *citationsContext) init(p *serviceContext, c *clientContext) {
 	s.svc = p
 	s.client = c
 
+	// v4 uses "item", but unAPI uses "id".  these are equivalent identifiers
 	s.url = c.ginCtx.Query("item")
+	if s.url == "" {
+		s.url = c.ginCtx.Query("id")
+	}
 
 	if id := path.Base(s.url); id != "" && s.svc.config.URLPrefix != "" {
 		s.v4url = s.svc.config.URLPrefix + id

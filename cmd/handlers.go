@@ -43,6 +43,31 @@ func (p *serviceContext) risHandler(c *gin.Context) {
 	p.citationHandler(c, newRisEncoder(p.config.Formats.RIS))
 }
 
+func (p *serviceContext) zoteroHandler(c *gin.Context) {
+	id := c.Query("id")
+	format := c.Query("format")
+
+	// no params: formats for any objects this endpoint will provide (ris only)
+	// id param only: formats for this object (ris only)
+	// in these cases, response will be the same (modulo an id attribute)
+	if format == "" {
+		idAttr := ""
+		if id != "" {
+			idAttr = fmt.Sprintf(` id="%s"`, id)
+		}
+
+		formatsXML := fmt.Sprintf(`<?xml version="1.0" encoding="UTF-8"?><formats%s><format name="ris" type="%s" /></formats>`, idAttr, p.config.Formats.RIS.ContentType)
+
+		c.Header("Content-Type", "application/xml")
+		c.String(http.StatusOK, formatsXML)
+
+		return
+	}
+
+	// id and format params: the citation itself
+	p.citationHandler(c, newRisEncoder(p.config.Formats.RIS))
+}
+
 func (p *serviceContext) ignoreHandler(c *gin.Context) {
 }
 

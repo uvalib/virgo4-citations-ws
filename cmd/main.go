@@ -53,6 +53,8 @@ func main() {
 		format.GET("/ris", svc.risHandler)
 	}
 
+	router.GET("/zotero", svc.zoteroHandler) // unAPI endpoint for Zotero
+
 	portStr := fmt.Sprintf(":%s", svc.config.Port)
 	log.Printf("[MAIN] listening on %s", portStr)
 
