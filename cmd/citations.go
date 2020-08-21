@@ -10,7 +10,7 @@ type citationType interface {
 	Populate(citationParts) error
 	ContentType() string
 	FileName() string
-	FileContents() (string, error)
+	Contents() (string, error)
 }
 
 type citationParts map[string][]string

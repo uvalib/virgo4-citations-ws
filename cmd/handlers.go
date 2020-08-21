@@ -106,7 +106,7 @@ func (p *serviceContext) healthCheckHandler(c *gin.Context) {
 func (s *citationsContext) serveCitation(citation citationType) {
 	c := s.client.ginCtx
 
-	data, err := citation.FileContents()
+	data, err := citation.Contents()
 
 	if err != nil {
 		c.String(http.StatusInternalServerError, err.Error())

@@ -209,7 +209,7 @@ func (e *risEncoder) getTagValue(tag, val string) string {
 	return strings.Join(lines, risLineEnding)
 }
 
-func (e *risEncoder) FileContents() (string, error) {
+func (e *risEncoder) Contents() (string, error) {
 	if len(e.tagValues[risTagType]) == 0 {
 		e.addTagValue(risTagType, risTypeGeneric)
 	}
