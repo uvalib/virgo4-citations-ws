@@ -66,159 +66,159 @@ func (e *mlaEncoder) Contents() (string, error) {
 	}
 
 	/*
-	     # === Author(s)
-	     # First author in "Last, First" form; second author in "First Last" form;
-	     # three or more authors shown as the first author followed by ", et al.".
-	     # If the author is the same as the publisher, skip the author.
-	     authors.delete_if { |v| v == publisher }
-	     if authors.present?
-	       total = authors.size
-	       list  = capitalize(authors.first.dup)
-	       if total > 2
-	         list << ', et al'
-	       elsif total > 1
-	         list << ', and ' << name_reverse(authors.last)
-	       end
-	       result << clean_end_punctuation(list)
-	       # Indicate if the "authors" are actually editors of the work.
-	       eds =
-	         get_related_names(false).map { |name_and_role|
-	           name_and_role.to_s.sub!(/\W+Editor\W*$/i, '')
-	         }.reject(&:blank?)
-	       if (authors - eds).empty?
-	         result << '.' if total > 2
-	         result << ', editor'
-	         result << 's' if total > 1
-	       end
-	       result << '.'
+	   # === Author(s)
+	   # First author in "Last, First" form; second author in "First Last" form;
+	   # three or more authors shown as the first author followed by ", et al.".
+	   # If the author is the same as the publisher, skip the author.
+	   authors.delete_if { |v| v == publisher }
+	   if authors.present?
+	     total = authors.size
+	     list  = capitalize(authors.first.dup)
+	     if total > 2
+	       list << ', et al'
+	     elsif total > 1
+	       list << ', and ' << name_reverse(authors.last)
 	     end
-
-	     # === Item Title
-	     # Titles of larger works (books, journals, etc) are italicized; title of
-	     # shorter works (poems, articles, etc) are in quotes.  If the article
-	     # title contains double quotes, convert them to single quotes before
-	     # wrapping the title in double quotes.
-	     if title.present?
-	       result << SPACE unless result.blank?
-	       title = mla_citation_title(title)
-	       if is_article
-	         title.gsub!(/[#{DQUOTE}\p{Pi}\p{Pf}]/u, SQUOTE)
-	         result << "\"#{title}.\""
-	       else
-	         result << "<em>#{title}</em>."
-	       end
+	     result << clean_end_punctuation(list)
+	     # Indicate if the "authors" are actually editors of the work.
+	     eds =
+	       get_related_names(false).map { |name_and_role|
+	         name_and_role.to_s.sub!(/\W+Editor\W*$/i, '')
+	       }.reject(&:blank?)
+	     if (authors - eds).empty?
+	       result << '.' if total > 2
+	       result << ', editor'
+	       result << 's' if total > 1
 	     end
+	     result << '.'
+	   end
 
-	     # === Container Title
-	     if journal.present?
-	       result << SPACE unless result.blank? || result.end_with?(SPACE)
-	       journal = mla_citation_title(journal)
-	       result << "<em>#{journal}</em>"
+	   # === Item Title
+	   # Titles of larger works (books, journals, etc) are italicized; title of
+	   # shorter works (poems, articles, etc) are in quotes.  If the article
+	   # title contains double quotes, convert them to single quotes before
+	   # wrapping the title in double quotes.
+	   if title.present?
+	     result << SPACE unless result.blank?
+	     title = mla_citation_title(title)
+	     if is_article
+	       title.gsub!(/[#{DQUOTE}\p{Pi}\p{Pf}]/u, SQUOTE)
+	       result << "\"#{title}.\""
+	     else
+	       result << "<em>#{title}</em>."
 	     end
+	   end
 
-	     # === Version/Edition
-	     if edition.present?
-	       unless result.blank?
-	         result << ','   unless result.end_with?(SPACE, '.', ',')
-	         result << SPACE unless result.end_with?(SPACE)
-	       end
-	       result << clean_end_punctuation(edition)
+	   # === Container Title
+	   if journal.present?
+	     result << SPACE unless result.blank? || result.end_with?(SPACE)
+	     journal = mla_citation_title(journal)
+	     result << "<em>#{journal}</em>"
+	   end
+
+	   # === Version/Edition
+	   if edition.present?
+	     unless result.blank?
+	       result << ','   unless result.end_with?(SPACE, '.', ',')
+	       result << SPACE unless result.end_with?(SPACE)
 	     end
+	     result << clean_end_punctuation(edition)
+	   end
 
-	     # === Container Editors
-	     if editors.present?
-	       unless result.blank?
-	         result << ','   unless result.end_with?(SPACE, '.', ',')
-	         result << SPACE unless result.end_with?(SPACE)
-	       end
-	       total = editors.size
-	       list  = editors.first.dup
-	       if total > 2
-	         list << ', et al.'
-	       elsif total > 1
-	         list << ', and ' << name_reverse(editors.last)
-	       end
-	       result << clean_end_punctuation(list)
+	   # === Container Editors
+	   if editors.present?
+	     unless result.blank?
+	       result << ','   unless result.end_with?(SPACE, '.', ',')
+	       result << SPACE unless result.end_with?(SPACE)
 	     end
-
-	     # === Accession Number (for archival collections)
-	     if an.present?
-	       unless result.blank?
-	         result << ','   unless result.end_with?(SPACE, '.', ',')
-	         result << SPACE unless result.end_with?(SPACE)
-	       end
-	       result << an
+	     total = editors.size
+	     list  = editors.first.dup
+	     if total > 2
+	       list << ', et al.'
+	     elsif total > 1
+	       list << ', and ' << name_reverse(editors.last)
 	     end
+	     result << clean_end_punctuation(list)
+	   end
 
-	     # === Publisher
-	     if publisher.present?
-	       unless result.blank?
-	         result << ','   unless result.end_with?(SPACE, '.', ',')
-	         result << SPACE unless result.end_with?(SPACE)
-	       end
-	       result << publisher
+	   # === Accession Number (for archival collections)
+	   if an.present?
+	     unless result.blank?
+	       result << ','   unless result.end_with?(SPACE, '.', ',')
+	       result << SPACE unless result.end_with?(SPACE)
 	     end
+	     result << an
+	   end
 
-	     # === Volume
-	     if volume.present?
-	       unless result.blank?
-	         result << ','   unless result.end_with?(SPACE, '.', ',')
-	         result << SPACE unless result.end_with?(SPACE)
-	       end
-	       result << volume
+	   # === Publisher
+	   if publisher.present?
+	     unless result.blank?
+	       result << ','   unless result.end_with?(SPACE, '.', ',')
+	       result << SPACE unless result.end_with?(SPACE)
 	     end
+	     result << publisher
+	   end
 
-	     # === Issue
-	     if issue.present?
-	       unless result.blank?
-	         result << ','   unless result.end_with?(SPACE, '.', ',')
-	         result << SPACE unless result.end_with?(SPACE)
-	       end
-	       result << issue
+	   # === Volume
+	   if volume.present?
+	     unless result.blank?
+	       result << ','   unless result.end_with?(SPACE, '.', ',')
+	       result << SPACE unless result.end_with?(SPACE)
 	     end
+	     result << volume
+	   end
 
-	     # === Date of publication
-	     # Should be "YYYY" for a book; "[Day] Mon. YYYY" for an article.
-	     if date.present?
-	       date_string = export_date(date, month_names: true)
-	       year, month, day = (date_string || date).split('/')
-	       month = "#{month[0,3]}." if month && (month.size > 3)
-	       if year && month && day && is_article
-	         date = "#{day} #{month} #{year}"
-	       elsif year && month && is_article
-	         date = "#{year}, #{month}"
-	       elsif year
-	         date = year.sub(/^(\d{4}).*$/, '\1')
-	       end
-	       unless result.blank?
-	         result << ','   unless result.end_with?(SPACE, '.', ',')
-	         result << SPACE unless result.end_with?(SPACE)
-	       end
-	       result << date
+	   # === Issue
+	   if issue.present?
+	     unless result.blank?
+	       result << ','   unless result.end_with?(SPACE, '.', ',')
+	       result << SPACE unless result.end_with?(SPACE)
 	     end
+	     result << issue
+	   end
 
-	     # === Pages
-	     if pages.present?
-	       unless result.blank?
-	         result << ','   unless result.end_with?(SPACE, '.', ',')
-	         result << SPACE unless result.end_with?(SPACE)
-	       end
-	       result << pages
+	   # === Date of publication
+	   # Should be "YYYY" for a book; "[Day] Mon. YYYY" for an article.
+	   if date.present?
+	     date_string = export_date(date, month_names: true)
+	     year, month, day = (date_string || date).split('/')
+	     month = "#{month[0,3]}." if month && (month.size > 3)
+	     if year && month && day && is_article
+	       date = "#{day} #{month} #{year}"
+	     elsif year && month && is_article
+	       date = "#{year}, #{month}"
+	     elsif year
+	       date = year.sub(/^(\d{4}).*$/, '\1')
 	     end
-
-	     # === URL/DOI
-	     if link.present?
-	       unless result.blank?
-	         result << ','   unless result.end_with?(SPACE, '.', ',')
-	         result << SPACE unless result.end_with?(SPACE)
-	       end
-	       result << link
+	     unless result.blank?
+	       result << ','   unless result.end_with?(SPACE, '.', ',')
+	       result << SPACE unless result.end_with?(SPACE)
 	     end
+	     result << date
+	   end
 
-	     # The end of the citation should be a period.
-	     result << '.' unless result.end_with?('.')
+	   # === Pages
+	   if pages.present?
+	     unless result.blank?
+	       result << ','   unless result.end_with?(SPACE, '.', ',')
+	       result << SPACE unless result.end_with?(SPACE)
+	     end
+	     result << pages
+	   end
 
-	     result
+	   # === URL/DOI
+	   if link.present?
+	     unless result.blank?
+	       result << ','   unless result.end_with?(SPACE, '.', ',')
+	       result << SPACE unless result.end_with?(SPACE)
+	     end
+	     result << link
+	   end
+
+	   # The end of the citation should be a period.
+	   result << '.' unless result.end_with?('.')
+
+	   result
 	*/
 
 	return "", errors.New("non-explicit MLA citations not yet implemented")

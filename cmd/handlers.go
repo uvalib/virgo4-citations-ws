@@ -49,17 +49,20 @@ func (p *serviceContext) unapiHandler(c *gin.Context) {
 
 	// no params: formats for any objects this endpoint will provide (ris only)
 	// id param only: formats for this object (ris only)
-	// in these cases, response will be the same (modulo an id attribute)
+	// in these cases, response will be the same (modulo an id attribute, and http status)
 	if format == "" {
 		idAttr := ""
+		status := http.StatusOK
+
 		if id != "" {
 			idAttr = fmt.Sprintf(` id="%s"`, id)
+			status = http.StatusMultipleChoices
 		}
 
 		formatsXML := fmt.Sprintf(`<?xml version="1.0" encoding="UTF-8"?><formats%s><format name="ris" type="%s" /></formats>`, idAttr, p.config.Formats.RIS.ContentType)
 
 		c.Header("Content-Type", "application/xml")
-		c.String(http.StatusOK, formatsXML)
+		c.String(status, formatsXML)
 
 		return
 	}
