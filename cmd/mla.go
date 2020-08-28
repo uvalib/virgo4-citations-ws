@@ -92,6 +92,9 @@ func (e *mlaEncoder) Contents() (string, error) {
 	     end
 	     result << '.'
 	   end
+	*/
+
+	/*
 
 	   # === Item Title
 	   # Titles of larger works (books, journals, etc) are italicized; title of
