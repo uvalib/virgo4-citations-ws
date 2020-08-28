@@ -117,15 +117,16 @@ func (s *citationsContext) serveCitation(citation citationType) {
 	}
 
 	fileName := citation.FileName()
+	contentType := citation.ContentType()
 
 	if s.client.opts.inline == true || fileName == "" {
+		c.Header("Content-Type", contentType)
 		c.String(http.StatusOK, data)
 		return
 	}
 
 	reader := strings.NewReader(data)
 	contentLength := int64(len(data))
-	contentType := citation.ContentType()
 
 	extraHeaders := map[string]string{
 		"Content-Disposition": fmt.Sprintf(`attachment; filename="%s"`, fileName),

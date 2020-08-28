@@ -1,7 +1,7 @@
 package main
 
 import (
-	"errors"
+	"fmt"
 	"strings"
 )
 
@@ -67,30 +67,6 @@ func (e *mlaEncoder) Contents() (string, error) {
 
 	res := ""
 
-	var authors []string
-
-	for _, author := range e.data.authors {
-		if author == e.data.publisher {
-			continue
-		}
-
-		authors = append(authors, author)
-	}
-
-	numAuthors := len(authors)
-	if numAuthors > 0 {
-		list := capitalize(authors[0])
-		switch {
-		case numAuthors > 2:
-			list += ", et al"
-
-		case numAuthors == 2:
-			list += ", and " + nameReverse(authors[1])
-		}
-
-		res += cleanEndPunctuation(list)
-	}
-
 	/*
 	   # === Author(s)
 	   # First author in "Last, First" form; second author in "First Last" form;
@@ -120,8 +96,46 @@ func (e *mlaEncoder) Contents() (string, error) {
 	   end
 	*/
 
-	/*
+	authors := removeEntries(e.data.authors, []string{e.data.publisher})
+	editors := removeEntries(e.data.editors, []string{e.data.publisher})
+	advisors := removeEntries(e.data.advisors, []string{e.data.publisher})
 
+	var creators []string
+	creators = append(creators, authors...)
+	creators = append(creators, editors...)
+	creators = append(creators, advisors...)
+
+	numCreators := len(creators)
+	if numCreators > 0 {
+		list := capitalize(creators[0])
+		switch {
+		case numCreators > 2:
+			list += ", et al"
+
+		case numCreators == 2:
+			list += ", and " + bibliographicOrder(creators[1])
+		}
+
+		res += cleanEndPunctuation(list)
+
+		nonEditors := removeEntries(creators, editors)
+
+		if len(nonEditors) == 0 {
+			if numCreators > 2 {
+				res += "."
+			}
+
+			res += ", editor"
+
+			if numCreators > 1 {
+				res += "s"
+			}
+		}
+
+		res += "."
+	}
+
+	/*
 	   # === Item Title
 	   # Titles of larger works (books, journals, etc) are italicized; title of
 	   # shorter works (poems, articles, etc) are in quotes.  If the article
@@ -137,14 +151,40 @@ func (e *mlaEncoder) Contents() (string, error) {
 	       result << "<em>#{title}</em>."
 	     end
 	   end
+	*/
 
+	if e.data.title != "" {
+		if res != "" {
+			res += " "
+		}
+
+		title := mlaCitationTitle(e.data.title)
+
+		if e.data.isArticle == true {
+			res += `"` + doubleToSingleQuotes(title) + `."`
+		} else {
+			res += "<em>" + title + "</em>."
+		}
+	}
+
+	/*
 	   # === Container Title
 	   if journal.present?
 	     result << SPACE unless result.blank? || result.end_with?(SPACE)
 	     journal = mla_citation_title(journal)
 	     result << "<em>#{journal}</em>"
 	   end
+	*/
 
+	if e.data.journal != "" {
+		if res != "" && strings.HasSuffix(res, " ") == false {
+			res += " "
+		}
+
+		res += "<em>" + mlaCitationTitle(e.data.journal) + "</em>"
+	}
+
+	/*
 	   # === Version/Edition
 	   if edition.present?
 	     unless result.blank?
@@ -153,7 +193,11 @@ func (e *mlaEncoder) Contents() (string, error) {
 	     end
 	     result << clean_end_punctuation(edition)
 	   end
+	*/
 
+	res = mlaAddPart(res, cleanEndPunctuation(e.data.edition))
+
+	/*
 	   # === Container Editors
 	   if editors.present?
 	     unless result.blank?
@@ -169,7 +213,11 @@ func (e *mlaEncoder) Contents() (string, error) {
 	     end
 	     result << clean_end_punctuation(list)
 	   end
+	*/
 
+	// NOTE: these are journal editors (as opposed to book editors); not yet implemented
+
+	/*
 	   # === Accession Number (for archival collections)
 	   if an.present?
 	     unless result.blank?
@@ -178,7 +226,11 @@ func (e *mlaEncoder) Contents() (string, error) {
 	     end
 	     result << an
 	   end
+	*/
 
+	// NOTE: archival items should all have a cite_as entry, obviating the need to handle accession number
+
+	/*
 	   # === Publisher
 	   if publisher.present?
 	     unless result.blank?
@@ -187,7 +239,11 @@ func (e *mlaEncoder) Contents() (string, error) {
 	     end
 	     result << publisher
 	   end
+	*/
 
+	res = mlaAddPart(res, e.data.publisher)
+
+	/*
 	   # === Volume
 	   if volume.present?
 	     unless result.blank?
@@ -196,7 +252,11 @@ func (e *mlaEncoder) Contents() (string, error) {
 	     end
 	     result << volume
 	   end
+	*/
 
+	res = mlaAddPart(res, e.data.volume)
+
+	/*
 	   # === Issue
 	   if issue.present?
 	     unless result.blank?
@@ -205,7 +265,11 @@ func (e *mlaEncoder) Contents() (string, error) {
 	     end
 	     result << issue
 	   end
+	*/
 
+	res = mlaAddPart(res, e.data.issue)
+
+	/*
 	   # === Date of publication
 	   # Should be "YYYY" for a book; "[Day] Mon. YYYY" for an article.
 	   if date.present?
@@ -225,7 +289,27 @@ func (e *mlaEncoder) Contents() (string, error) {
 	     end
 	     result << date
 	   end
+	*/
 
+	if e.data.date != "" {
+		date := ""
+		month := monthName(e.data.month)
+
+		switch {
+		case e.data.isArticle && e.data.year != 0 && month != "" && e.data.day != 0:
+			date = fmt.Sprintf("%d %s %d", e.data.day, month, e.data.year)
+
+		case e.data.isArticle && e.data.year != 0 && month != "":
+			date = fmt.Sprintf("%d, %s", e.data.year, month)
+
+		case e.data.year != 0:
+			date = fmt.Sprintf("%d", e.data.year)
+		}
+
+		res = mlaAddPart(res, date)
+	}
+
+	/*
 	   # === Pages
 	   if pages.present?
 	     unless result.blank?
@@ -234,7 +318,11 @@ func (e *mlaEncoder) Contents() (string, error) {
 	     end
 	     result << pages
 	   end
+	*/
 
+	res = mlaAddPart(res, e.data.pages)
+
+	/*
 	   # === URL/DOI
 	   if link.present?
 	     unless result.blank?
@@ -243,13 +331,40 @@ func (e *mlaEncoder) Contents() (string, error) {
 	     end
 	     result << link
 	   end
-
-	   # The end of the citation should be a period.
-	   result << '.' unless result.end_with?('.')
-
-	   result
 	*/
 
-	return "", errors.New("non-explicit MLA citations not yet implemented")
-	//return res, nil
+	res = mlaAddPart(res, e.data.link)
+
+	/*
+	   # The end of the citation should be a period.
+	   result << '.' unless result.end_with?('.')
+	*/
+
+	if strings.HasSuffix(res, ".") == false {
+		res += "."
+	}
+
+	return res, nil
+}
+
+func mlaAddPart(str, part string) string {
+	res := str
+
+	if part == "" {
+		return res
+	}
+
+	if res != "" {
+		if strings.HasSuffix(res, " ") == false && strings.HasSuffix(res, ".") == false && strings.HasSuffix(res, ",") == false {
+			res += ","
+		}
+
+		if strings.HasSuffix(res, " ") == false {
+			res += " "
+		}
+	}
+
+	res += part
+
+	return res
 }

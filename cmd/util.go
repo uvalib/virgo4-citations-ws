@@ -27,3 +27,13 @@ func firstElementOf(s []string) string {
 
 	return val
 }
+
+func sliceContainsString(haystack []string, needle string) bool {
+	for _, item := range haystack {
+		if item == needle {
+			return true
+		}
+	}
+
+	return false
+}
