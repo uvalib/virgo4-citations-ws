@@ -42,6 +42,7 @@ type risEncoder struct {
 
 var risPartsMap map[string][]string
 var risTypesMap map[string]string
+var risAppendMap map[string]string
 
 func newRisEncoder(cfg serviceConfigFormat) *risEncoder {
 	e := risEncoder{}
@@ -61,6 +62,7 @@ func (e *risEncoder) Init(url string) {
 func (e *risEncoder) Populate(parts citationParts) error {
 	for part, values := range parts {
 		risCodes := risPartsMap[part]
+		postfix := risAppendMap[part]
 
 		if len(risCodes) == 0 {
 			continue
@@ -74,6 +76,10 @@ func (e *risEncoder) Populate(parts citationParts) error {
 					risValue = risTypesMap[value]
 					if risValue == "" {
 						risValue = risTypeGeneric
+					}
+				} else {
+					if postfix != "" {
+						risValue = risValue + " " + postfix
 					}
 				}
 
@@ -274,11 +280,13 @@ func init() {
 	risPartsMap = make(map[string][]string)
 
 	risPartsMap["abstract"] = []string{"AB"}
+	risPartsMap["advisor"] = []string{"AU"}
 	risPartsMap["author"] = []string{"AU"}
 	risPartsMap["call_number"] = []string{"CN"}
 	risPartsMap["content_provider"] = []string{"DB"}
 	risPartsMap["description"] = []string{"N1"}
 	risPartsMap["doi"] = []string{"DO"}
+	risPartsMap["editor"] = []string{"AU"}
 	risPartsMap["format"] = []string{"TY"}
 	risPartsMap["full_text_url"] = []string{"L2"}
 	risPartsMap["genre"] = []string{"M3"}
@@ -316,4 +324,10 @@ func init() {
 	risTypesMap["sound"] = "SOUND"
 	risTypesMap["thesis"] = "THES"
 	risTypesMap["video"] = "VIDEO"
+
+	// mapping of strings to append to authors, depending on type
+	risAppendMap = make(map[string]string)
+
+	risAppendMap["advisor"] = "(advisor)"
+	risAppendMap["editor"] = "(editor)"
 }
