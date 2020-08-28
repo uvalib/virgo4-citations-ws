@@ -1,7 +1,6 @@
 package main
 
 import (
-	"errors"
 	"log"
 	"regexp"
 	"strings"
@@ -17,6 +16,7 @@ type citationREs struct {
 	editionCorrect     *regexp.Regexp
 	editionCorrectable *regexp.Regexp
 	fieldEnd           *regexp.Regexp
+	capitalizeable     *regexp.Regexp
 }
 
 var re citationREs
@@ -27,8 +27,9 @@ type genericCitation struct {
 	isArticle bool
 	citeAs    []string
 	authors   []string
-	title     string
 	editors   []string
+	advisors  []string
+	title     string
 	journal   string
 	volume    string
 	issue     string
@@ -61,7 +62,7 @@ func newGenericCitation(parts citationParts, opts genericCitationOpts) (*generic
 
 	   authors   = get_author_list
 	   title     = setup_title_info
-	   editors   = nil # TODO: Journal editors as opposed to book editors
+	   editors   = nil # TO-DO: Journal editors as opposed to book editors
 	   journal   = export_journal
 	   volume    = setup_volume(xxx)
 	   issue     = setup_issue(xxx)
@@ -90,8 +91,9 @@ func newGenericCitation(parts citationParts, opts genericCitationOpts) (*generic
 
 	// set values
 	c.setupAuthors(parts["author"])
-	c.setupTitle(firstElementOf(parts["title"]), firstElementOf(parts["subtitle"]))
 	c.setupEditors(parts["editor"])
+	c.setupAdvisors(parts["advisor"])
+	c.setupTitle(firstElementOf(parts["title"]), firstElementOf(parts["subtitle"]))
 	c.setupJournal(firstElementOf(parts["journal"]))
 	c.setupVolume(firstElementOf(parts["volume"]))
 	c.setupIssue(firstElementOf(parts["issue"]))
@@ -103,8 +105,7 @@ func newGenericCitation(parts citationParts, opts genericCitationOpts) (*generic
 
 	c.log()
 
-	//	return &c, nil
-	return nil, errors.New("full generic citation parsing not yet implemented")
+	return &c, nil
 }
 
 func (c *genericCitation) log() {
@@ -114,11 +115,15 @@ func (c *genericCitation) log() {
 		log.Printf("  author    : [%s]", author)
 	}
 
-	log.Printf("  title     : [%s]", c.title)
-
 	for _, editor := range c.editors {
 		log.Printf("  editor    : [%s]", editor)
 	}
+
+	for _, advisor := range c.advisors {
+		log.Printf("  advisor   : [%s]", advisor)
+	}
+
+	log.Printf("  title     : [%s]", c.title)
 
 	log.Printf("  journal   : [%s]", c.journal)
 	log.Printf("  volume    : [%s]", c.volume)
@@ -131,8 +136,15 @@ func (c *genericCitation) log() {
 }
 
 func (c *genericCitation) setupAuthors(authors []string) {
-	// TODO
 	c.authors = authors
+}
+
+func (c *genericCitation) setupEditors(editors []string) {
+	c.editors = editors
+}
+
+func (c *genericCitation) setupAdvisors(advisors []string) {
+	c.advisors = advisors
 }
 
 func (c *genericCitation) setupTitle(title, subtitle string) {
@@ -143,10 +155,6 @@ func (c *genericCitation) setupTitle(title, subtitle string) {
 	}
 
 	c.title = fullTitle
-}
-
-func (c *genericCitation) setupEditors(editors []string) {
-	c.editors = []string{}
 }
 
 func (c *genericCitation) setupJournal(journal string) {
@@ -313,6 +321,19 @@ func stripEnclosers(outer string, opener, closer rune) string {
 	return strings.TrimSpace(inner)
 }
 
+func capitalize(s string) string {
+	if re.capitalizeable.MatchString(s) == false {
+		return s
+	}
+
+	return strings.ToUpper(string(s[0])) + s[1:]
+}
+
+func nameReverse(s string) string {
+	// TODO: implement me
+	return strings.ToUpper(s)
+}
+
 func init() {
 	re.volume = regexp.MustCompile(`(?i)^vol`)
 	re.issue = regexp.MustCompile(`(?i)^(n[ou]|iss)`)
@@ -323,4 +344,5 @@ func init() {
 	re.editionCorrect = regexp.MustCompile(`(?i) eds?\.( |$)`)
 	re.editionCorrectable = regexp.MustCompile(`(?i) ed(|ition)[[:punct:]]*$`)
 	re.fieldEnd = regexp.MustCompile(`[,;:\/\s]+$`)
+	re.capitalizeable = regexp.MustCompile(`^[a-z][a-z\s]`)
 }

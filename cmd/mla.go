@@ -65,6 +65,32 @@ func (e *mlaEncoder) Contents() (string, error) {
 		return strings.Join(e.data.citeAs, "\n"), nil
 	}
 
+	res := ""
+
+	var authors []string
+
+	for _, author := range e.data.authors {
+		if author == e.data.publisher {
+			continue
+		}
+
+		authors = append(authors, author)
+	}
+
+	numAuthors := len(authors)
+	if numAuthors > 0 {
+		list := capitalize(authors[0])
+		switch {
+		case numAuthors > 2:
+			list += ", et al"
+
+		case numAuthors == 2:
+			list += ", and " + nameReverse(authors[1])
+		}
+
+		res += cleanEndPunctuation(list)
+	}
+
 	/*
 	   # === Author(s)
 	   # First author in "Last, First" form; second author in "First Last" form;
@@ -225,4 +251,5 @@ func (e *mlaEncoder) Contents() (string, error) {
 	*/
 
 	return "", errors.New("non-explicit MLA citations not yet implemented")
+	//return res, nil
 }
