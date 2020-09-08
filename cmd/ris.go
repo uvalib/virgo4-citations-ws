@@ -50,7 +50,7 @@ func newRisEncoder(cfg serviceConfigFormat) *risEncoder {
 	e.extension = cfg.Extension
 	e.contentType = cfg.ContentType
 	e.tagValues = make(tagValueMap)
-	e.policy = bluemonday.StrictPolicy()
+	e.policy = bluemonday.UGCPolicy()
 
 	return &e
 }
@@ -220,7 +220,8 @@ func (e *risEncoder) Contents() (string, error) {
 		e.addTagValue(risTagType, risTypeGeneric)
 	}
 
-	e.addTagValue(risTagNote, e.url)
+	url := fmt.Sprintf(`<a href="%s">%s</a>`, e.url, e.url)
+	e.addTagValue(risTagNote, url)
 
 	tags := []string{}
 	for tag := range e.tagValues {
