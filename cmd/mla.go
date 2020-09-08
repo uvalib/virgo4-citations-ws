@@ -113,7 +113,7 @@ func (e *mlaEncoder) Contents() (string, error) {
 			list += ", et al"
 
 		case numCreators == 2:
-			list += ", and " + bibliographicOrder(creators[1])
+			list += ", and " + readingOrder(creators[1])
 		}
 
 		res += cleanEndPunctuation(list)
@@ -345,6 +345,69 @@ func (e *mlaEncoder) Contents() (string, error) {
 	}
 
 	return res, nil
+}
+
+func mlaCitationTitle(s string) string {
+	/*
+	   # Format a title for use in an MLA citation.
+	   #
+	   # All words other than connector words are capitalized.  If the title ends
+	   # with a period, the period is removed so that the caller as control over
+	   # where the period is added back in.  Other terminal punctuation
+	   # (including "...") is left untouched.
+	   #
+	   # @param [String] title_text
+	   #
+	   # @return [String]
+	   #
+	   # Replaces:
+	   # @see Blacklight::Solr::Document::MarcExport#mla_citation_title
+	   #
+	   # TO-DO: Implement using UVA::Utils::StringMethods#titleize
+	   #
+	   def mla_citation_title(title_text, *)
+	     no_upcase = %w(a an and but by for it of the to with)
+	     words = title_text.to_s.strip.split(SPACE)
+	     words.map { |w|
+	       no_upcase.include?(w) ? w : capitalize(w)
+	     }.join(SPACE).sub(/(?<!\.\.)\.$/, '')
+	   end
+	*/
+	noCapitalize := []string{
+		"a",
+		"an",
+		"and",
+		"but",
+		"by",
+		"for",
+		"it",
+		"of",
+		"the",
+		"to",
+		"with",
+	}
+
+	oldWords := strings.Split(strings.TrimSpace(s), " ")
+	var newWords []string
+
+	for _, word := range oldWords {
+		if sliceContainsString(noCapitalize, word) == true {
+			newWords = append(newWords, word)
+		} else {
+			newWords = append(newWords, capitalize(word))
+		}
+	}
+
+	title := strings.Join(newWords, " ")
+
+	switch {
+	case strings.HasSuffix(title, "..."):
+		return title
+	case strings.HasSuffix(title, "."):
+		return title[:len(title)-1]
+	}
+
+	return title
 }
 
 func mlaAddPart(str, part string) string {

@@ -37,3 +37,26 @@ func sliceContainsString(haystack []string, needle string) bool {
 
 	return false
 }
+
+func removeEntries(haystack []string, needles []string) []string {
+	var res []string
+
+	for _, hay := range haystack {
+		remove := false
+
+		for _, needle := range needles {
+			if hay == needle {
+				remove = true
+				break
+			}
+		}
+
+		if remove == true {
+			continue
+		}
+
+		res = append(res, hay)
+	}
+
+	return res
+}

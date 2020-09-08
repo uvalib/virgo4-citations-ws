@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"log"
 	"regexp"
 	"strings"
@@ -17,9 +18,11 @@ type citationREs struct {
 	fieldEnd           *regexp.Regexp
 	capitalizeable     *regexp.Regexp
 	doubleQuoted       *regexp.Regexp
+	lowerLastNamePart  *regexp.Regexp
 }
 
 var re citationREs
+var nameSuffixes map[string]bool
 
 // data common among CMS/APA/MLA citations
 type genericCitation struct {
@@ -323,9 +326,7 @@ func capitalize(s string) string {
 	return strings.ToUpper(string(s[0])) + s[1:]
 }
 
-func bibliographicOrder(name string) string {
-	// TODO: implement me
-
+func readingOrder(name string) string {
 	/*
 	   # Transforms the form "last_name, first_name [middle_names][, suffix]"
 	   # into the form "first_name [middle_names] last_name[, suffix]".  If the
@@ -381,97 +382,138 @@ func bibliographicOrder(name string) string {
 	   end
 	*/
 
-	return name
-}
+	if name == "" || strings.Contains(name, ")") == true || strings.Contains(name, "(") == true {
+		return name
+	}
 
-func removeEntries(haystack []string, needles []string) []string {
-	var res []string
+	var commaParts []string
+	var suffixParts []string
 
-	for _, hay := range haystack {
-		remove := false
+	var lastName string
+	var otherNames string
+	var suffixes string
 
-		for _, needle := range needles {
-			if hay == needle {
-				remove = true
+	for _, p := range strings.Split(name, ",") {
+		part := strings.TrimSpace(p)
+		if part == "" {
+			continue
+		}
+
+		commaParts = append(commaParts, part)
+	}
+
+	for {
+		if len(commaParts) == 0 {
+			break
+		}
+
+		last := commaParts[len(commaParts)-1]
+
+		if nameSuffixes[last] == false {
+			break
+		}
+
+		suffixParts = append([]string{last}, suffixParts...)
+		commaParts = commaParts[:len(commaParts)-1]
+	}
+
+	if len(suffixParts) > 0 {
+		suffixes = fmt.Sprintf(", %s", strings.Join(suffixParts, ", "))
+	}
+
+	if len(commaParts) > 1 {
+		lastName, commaParts = commaParts[0], commaParts[1:]
+		otherNames = strings.Join(commaParts, ", ")
+	} else {
+		// FIXME: potential out-of-bounds for certain input?  V3 did not seem to check for this, so we won't either
+		nameParts := strings.Split(commaParts[0], " ")
+
+		/*
+		   # Remove the elements from the end of *name_parts* which appear to be a
+		   # last name, accounting for multi-part names like "de la Croix" or
+		   # "v. Ribbentrop".
+		   #
+		   # @param [Array<String>] name_parts   Array to be modified.
+		   #
+		   # @return [String]
+		   #
+		   # === Implementation Notes
+		   # It is assumed that the full name represented by *name_parts* is comprised
+		   # of zero or more "given" names and a surname which may begin with zero or
+		   # more lowercase words (like "de" or "la") followed by one or more surnames
+		   # (or ordinal designations like "VIII") which each begin with a capital
+		   # (although the surnames themselves may contain spaces).
+		   #
+		   def extract_last_name!(name_parts)
+		     surname   = name_parts.pop
+		     lowercase = /^\p{Lower}+([\s.-]\p{Lower})*$/u
+		     if name_parts.any? { |part| part =~ lowercase }
+		       result = [surname]
+		       result.unshift(name_parts.pop) while name_parts.last !~ lowercase
+		       result.unshift(name_parts.pop) while name_parts.last =~ lowercase
+		       result.join(' ')
+		     else
+		       surname
+		     end
+		   end
+		*/
+
+		lastName, nameParts = nameParts[len(nameParts)-1], nameParts[:len(nameParts)-1]
+
+		hasLowerLast := false
+		for _, part := range nameParts {
+			if re.lowerLastNamePart.MatchString(part) == true {
+				hasLowerLast = true
 				break
 			}
 		}
 
-		if remove == true {
-			continue
+		if hasLowerLast == true {
+			lastParts := []string{lastName}
+
+			for {
+				if len(nameParts) == 0 {
+					break
+				}
+
+				lastPart := nameParts[len(nameParts)-1]
+
+				if re.lowerLastNamePart.MatchString(lastPart) == true {
+					break
+				}
+
+				lastParts = append([]string{lastPart}, lastParts...)
+			}
+
+			for {
+				if len(nameParts) == 0 {
+					break
+				}
+
+				lastPart := nameParts[len(nameParts)-1]
+
+				if re.lowerLastNamePart.MatchString(lastPart) == false {
+					break
+				}
+
+				lastParts = append([]string{lastPart}, lastParts...)
+			}
+
+			lastName = strings.Join(lastParts, " ")
 		}
 
-		res = append(res, hay)
+		otherNames = strings.Join(nameParts, " ")
 	}
 
-	return res
+	if otherNames != "" {
+		otherNames += " "
+	}
+
+	return fmt.Sprintf("%s%s%s", otherNames, lastName, suffixes)
 }
 
 func doubleToSingleQuotes(s string) string {
 	return re.doubleQuoted.ReplaceAllString(s, `'`)
-}
-
-func mlaCitationTitle(s string) string {
-	/*
-	   # Format a title for use in an MLA citation.
-	   #
-	   # All words other than connector words are capitalized.  If the title ends
-	   # with a period, the period is removed so that the caller as control over
-	   # where the period is added back in.  Other terminal punctuation
-	   # (including "...") is left untouched.
-	   #
-	   # @param [String] title_text
-	   #
-	   # @return [String]
-	   #
-	   # Replaces:
-	   # @see Blacklight::Solr::Document::MarcExport#mla_citation_title
-	   #
-	   # TODO: Implement using UVA::Utils::StringMethods#titleize
-	   #
-	   def mla_citation_title(title_text, *)
-	     no_upcase = %w(a an and but by for it of the to with)
-	     words = title_text.to_s.strip.split(SPACE)
-	     words.map { |w|
-	       no_upcase.include?(w) ? w : capitalize(w)
-	     }.join(SPACE).sub(/(?<!\.\.)\.$/, '')
-	   end
-	*/
-	noCapitalize := []string{
-		"a",
-		"an",
-		"and",
-		"but",
-		"by",
-		"for",
-		"it",
-		"of",
-		"the",
-		"to",
-		"with",
-	}
-
-	oldWords := strings.Split(strings.TrimSpace(s), " ")
-	var newWords []string
-
-	for _, word := range oldWords {
-		if sliceContainsString(noCapitalize, word) == true {
-			newWords = append(newWords, word)
-		} else {
-			newWords = append(newWords, capitalize(word))
-		}
-	}
-
-	title := strings.Join(newWords, " ")
-
-	switch {
-	case strings.HasSuffix(title, "..."):
-		return title
-	case strings.HasSuffix(title, "."):
-		return title[:len(title)-1]
-	}
-
-	return title
 }
 
 func monthName(m int) string {
@@ -493,4 +535,50 @@ func init() {
 	re.fieldEnd = regexp.MustCompile(`[,;:\/\s]+$`)
 	re.capitalizeable = regexp.MustCompile(`^[a-z][a-z\s]`)
 	re.doubleQuoted = regexp.MustCompile(`(?U)[#{"}\p{Pi}\p{Pf}]`)
+	re.lowerLastNamePart = regexp.MustCompile(`(?U)^([[:lower:]])+([[[:lower:]]\s.-])*$`)
+
+	nameSuffixes = make(map[string]bool)
+
+	suffixes := []string{
+		"B.A.",
+		"BA",
+		"B.S.",
+		"BS",
+		"D.D.",
+		"DD",
+		"D.Phil.",
+		"DPhil",
+		"D.D.S.",
+		"DDS",
+		"Ed.D.",
+		"EdD",
+		"Esquire",
+		"Esq.",
+		"J.D.",
+		"JD",
+		"Junior",
+		"Jnr",
+		"Jr.",
+		"Jr",
+		"LL.D.",
+		"LLD",
+		"M.B.A.",
+		"MBA",
+		"M.D.",
+		"MD",
+		"M.A.",
+		"MA",
+		"Ph.D.",
+		"PhD",
+		"R.N.",
+		"RN",
+		"Senior",
+		"Snr",
+		"Sr.",
+		"Sr",
+	}
+
+	for _, suffix := range suffixes {
+		nameSuffixes[suffix] = true
+	}
 }
