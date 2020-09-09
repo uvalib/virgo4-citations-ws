@@ -19,6 +19,9 @@ type citationREs struct {
 	capitalizeable     *regexp.Regexp
 	doubleQuoted       *regexp.Regexp
 	lowerLastNamePart  *regexp.Regexp
+	doiPrefix          *regexp.Regexp
+	doiURL             *regexp.Regexp
+	urlProtocol        *regexp.Regexp
 }
 
 var re citationREs
@@ -26,6 +29,7 @@ var nameSuffixes map[string]bool
 
 // data common among CMS/APA/MLA citations
 type genericCitation struct {
+	v4url     string
 	opts      genericCitationOpts
 	isArticle bool
 	citeAs    []string
@@ -55,7 +59,7 @@ type genericCitationOpts struct {
 	publisherPlace bool
 }
 
-func newGenericCitation(parts citationParts, opts genericCitationOpts) (*genericCitation, error) {
+func newGenericCitation(v4url string, parts citationParts, opts genericCitationOpts) (*genericCitation, error) {
 	/*
 	   # If a citation has been specified, use that rather than constructing a
 	   # citation from metadata.
@@ -85,6 +89,7 @@ func newGenericCitation(parts citationParts, opts genericCitationOpts) (*generic
 	*/
 
 	c := genericCitation{opts: opts}
+	c.v4url = v4url
 
 	// check for explicit citation
 	c.citeAs = parts["explicit"]
@@ -96,18 +101,36 @@ func newGenericCitation(parts citationParts, opts genericCitationOpts) (*generic
 	c.isArticle = firstElementOf(parts["format"]) == "article"
 
 	// set values
-	c.setupAuthors(parts["author"])
-	c.setupEditors(parts["editor"])
-	c.setupAdvisors(parts["advisor"])
-	c.setupTitle(firstElementOf(parts["title"]), firstElementOf(parts["subtitle"]))
-	c.setupJournal(firstElementOf(parts["journal"]))
-	c.setupVolume(firstElementOf(parts["volume"]))
-	c.setupIssue(firstElementOf(parts["issue"]))
-	c.setupPages(firstElementOf(parts["pages"]))
-	c.setupEdition(firstElementOf(parts["edition"]))
-	c.setupPublisher(firstElementOf(parts["publisher"]), firstElementOf(parts["published_location"]))
-	c.setupDate(firstElementOf(parts["published_date"]))
-	c.setupLink(firstElementOf(parts["url"]))
+	authors := parts["author"]
+	editors := parts["editor"]
+	advisors := parts["advisor"]
+	title := firstElementOf(parts["title"])
+	subtitle := firstElementOf(parts["subtitle"])
+	journal := firstElementOf(parts["journal"])
+	volume := firstElementOf(parts["volume"])
+	issue := firstElementOf(parts["issue"])
+	pages := firstElementOf(parts["pages"])
+	edition := firstElementOf(parts["edition"])
+	publisher := firstElementOf(parts["publisher"])
+	publishedLocation := firstElementOf(parts["published_location"])
+	date := firstElementOf(parts["published_date"])
+	url := firstElementOf(parts["url"])
+	doi := firstElementOf(parts["doi"])
+	access := firstElementOf(parts["access"])
+	serialNumbers := parts["serial_number"]
+
+	c.setupAuthors(authors)
+	c.setupEditors(editors)
+	c.setupAdvisors(advisors)
+	c.setupTitle(title, subtitle)
+	c.setupJournal(journal)
+	c.setupVolume(volume)
+	c.setupIssue(issue)
+	c.setupPages(pages)
+	c.setupEdition(edition)
+	c.setupPublisher(publisher, publishedLocation)
+	c.setupDate(date)
+	c.setupLink(url, doi, access, serialNumbers)
 
 	c.log()
 
@@ -275,10 +298,119 @@ func (c *genericCitation) setupDate(date string) {
 	}
 }
 
-func (c *genericCitation) setupLink(link string) {
-	// TODO: implement me
+func (c *genericCitation) setupLink(url, doi, access string, serialNumbers []string) {
 	c.link = ""
+
+	/*
+	   # Get the link (DOI or URL) for the item for use in citations.
+	   #
+	   # DOI is preferred; if present it is converted into URL form.
+	   #
+	   # NOTE: Because the OpenURL link for articles is sort of ugly, this method
+	   # will return *nil* for articles unless they have a DOI.
+	   #
+	   # @param [String,Boolean] url     If set (not *nil* or *false*) then return
+	   #                                   a link even if the item is not an
+	   #                                   exclusively online item.  If a String,
+	   #                                   then also use that value in place of
+	   #                                   the result from #export_url.
+	   # @param [Array]  args
+	   #
+	   # @return [String]
+	   # @return [nil]
+	   #
+	   def setup_link(url = nil, *args)
+	     # Supply/override *url* as needed.
+	     if (doi = dois.first.presence)
+	       # Prefer DOI if it's directly available.
+	       url = 'https://doi.org/' + doi.sub(/^doi:/, '')
+	     elsif (u = get_url.first) && (u =~ %r{^https?://(\w+\.)?doi\.org/})
+	       # Prefer DOI if it's present indirectly -- even if a *url* parameter
+	       # was provided.
+	       url = u
+	     elsif url.blank? && !born_digital?
+	       # Only show a link if this is an electronic item.
+	       return
+	     end
+
+	     # Only show a URL if this is an electronic item.
+	     return if url.blank? || !born_digital?
+
+	     # Create the URL as a link unless the context requires simple text.
+	     opt = args.last.is_a?(Hash) ? args.last.dup : {}
+	     result  = opt.delete(:strip_protocol) ? url.sub(%r{^\w+://}, '') : url
+	     context = opt.delete(:context)
+	     if context && ![:email, :export].include?(context)
+	       link_to(result, url, opt)
+	     else
+	       result
+	     end
+	   end
+
+	   # Indicate whether this document has online content which did not have an
+	   # original form that was published through print media.
+	   #
+	   # For citation purposes, a born-digital item includes a "Retrieved from"
+	   # notation.
+	   #
+	   def born_digital?(*)
+	     # TODO: Verify this definition...
+	     online_only? && isbns.blank? && issns.blank?
+	   end
+	*/
+
+	isBornDigital := access == "online_only" && len(serialNumbers) == 0
+
+	// TODO: this should be limited to specific document types
+	link := c.v4url
+
+	switch {
+	case doi != "":
+		link = "https://doi.org/" + re.doiPrefix.ReplaceAllString(doi, "")
+
+	case url != "" && re.doiURL.MatchString(url):
+		link = url
+
+	case url == "" && isBornDigital == false:
+		return
+	}
+
+	if link == "" || isBornDigital == false {
+		return
+	}
+
+	if c.opts.stripProtocol == true {
+		link = re.urlProtocol.ReplaceAllString(link, "")
+	}
+
+	c.link = link
 }
+
+// TODO: EDS should send ISSNs with citation_type 'serial_number'
+// TODO: "access" citation part for solr pools (and others?)
+
+/*
+	// this should come from the pools:
+
+  # @see UVA::IndexDoc#online_only?
+  #
+  def online_only?
+    internet_only? ||
+      has_feature?('pda_ebook', 'has_embedded_avalon_media') ||
+      values_for(:source_facet).all? { |v| v =~ /Libra.*Repository/i } ||
+      (format = values_for(:format_facet)).include?('Coin') ||
+      (%w(Online Photographs) - format).empty? ||
+      (%w(Online Physical\ Object) - format).empty?
+  end
+
+  # @see UVA::IndexDoc#internet_only?
+  #
+  # (That is, whether "Internet materials" is its sole location.)
+  #
+  def internet_only?
+    values_for(:location_facet) == ['Internet materials']
+  end
+*/
 
 func cleanEndPunctuation(s string) string {
 	cleaned := re.fieldEnd.ReplaceAllString(s, "")
@@ -382,7 +514,7 @@ func readingOrder(name string) string {
 	   end
 	*/
 
-	if name == "" || strings.Contains(name, ")") == true || strings.Contains(name, "(") == true {
+	if strings.TrimSpace(name) == "" || strings.Contains(name, ")") == true || strings.Contains(name, "(") == true {
 		return name
 	}
 
@@ -418,14 +550,18 @@ func readingOrder(name string) string {
 	}
 
 	if len(suffixParts) > 0 {
-		suffixes = fmt.Sprintf(", %s", strings.Join(suffixParts, ", "))
+		suffixes = strings.Join(suffixParts, ", ")
+		if len(commaParts) > 0 {
+			suffixes = ", " + suffixes
+		}
 	}
 
-	if len(commaParts) > 1 {
+	switch {
+	case len(commaParts) > 1:
 		lastName, commaParts = commaParts[0], commaParts[1:]
 		otherNames = strings.Join(commaParts, ", ")
-	} else {
-		// FIXME: potential out-of-bounds for certain input?  V3 did not seem to check for this, so we won't either
+
+	case len(commaParts) == 1:
 		nameParts := strings.Split(commaParts[0], " ")
 
 		/*
@@ -536,6 +672,9 @@ func init() {
 	re.capitalizeable = regexp.MustCompile(`^[a-z][a-z\s]`)
 	re.doubleQuoted = regexp.MustCompile(`(?U)[#{"}\p{Pi}\p{Pf}]`)
 	re.lowerLastNamePart = regexp.MustCompile(`(?U)^([[:lower:]])+([[[:lower:]]\s.-])*$`)
+	re.doiPrefix = regexp.MustCompile(`^doi:`)
+	re.doiURL = regexp.MustCompile(`^https?://(\w+\.)?doi\.org/`)
+	re.urlProtocol = regexp.MustCompile(`^\w+://`)
 
 	nameSuffixes = make(map[string]bool)
 

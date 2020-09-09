@@ -45,7 +45,7 @@ func (e *cmsEncoder) Populate(parts citationParts) error {
 		publisherPlace: true,
 	}
 
-	if e.data, err = newGenericCitation(parts, opts); err != nil {
+	if e.data, err = newGenericCitation(e.url, parts, opts); err != nil {
 		return err
 	}
 
