@@ -2,19 +2,21 @@ package main
 
 import (
 	"errors"
-	//"strings"
+	"strings"
 )
 
 type cmsEncoder struct {
-	cfg  serviceConfigFormat
-	url  string
-	data *genericCitation
+	cfg          serviceConfigFormat
+	url          string
+	preferCiteAs bool
+	data         *genericCitation
 }
 
-func newCmsEncoder(cfg serviceConfigFormat) *cmsEncoder {
+func newCmsEncoder(cfg serviceConfigFormat, preferCiteAs bool) *cmsEncoder {
 	e := cmsEncoder{}
 
 	e.cfg = cfg
+	e.preferCiteAs = preferCiteAs
 
 	return &e
 }
@@ -63,6 +65,10 @@ func (e *cmsEncoder) FileName() string {
 }
 
 func (e *cmsEncoder) Contents() (string, error) {
+	if e.preferCiteAs == true && len(e.data.citeAs) > 0 {
+		return strings.Join(e.data.citeAs, "\n"), nil
+	}
+
 	/*
 	   # === Author(s)
 	   # First author in "Last, First" form; second author in "First Last" form;

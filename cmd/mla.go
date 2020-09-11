@@ -6,15 +6,17 @@ import (
 )
 
 type mlaEncoder struct {
-	cfg  serviceConfigFormat
-	url  string
-	data *genericCitation
+	cfg          serviceConfigFormat
+	url          string
+	preferCiteAs bool
+	data         *genericCitation
 }
 
-func newMlaEncoder(cfg serviceConfigFormat) *mlaEncoder {
+func newMlaEncoder(cfg serviceConfigFormat, preferCiteAs bool) *mlaEncoder {
 	e := mlaEncoder{}
 
 	e.cfg = cfg
+	e.preferCiteAs = preferCiteAs
 
 	return &e
 }
@@ -63,6 +65,10 @@ func (e *mlaEncoder) FileName() string {
 }
 
 func (e *mlaEncoder) Contents() (string, error) {
+	if e.preferCiteAs == true && len(e.data.citeAs) > 0 {
+		return strings.Join(e.data.citeAs, "\n"), nil
+	}
+
 	res := ""
 
 	/*

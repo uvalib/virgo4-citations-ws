@@ -36,14 +36,14 @@ func (p *serviceContext) citationHandler(c *gin.Context, citations []citationTyp
 func (p *serviceContext) allHandler(c *gin.Context) {
 	p.citationHandler(c, []citationType{
 		newCiteAsEncoder(p.config.Formats.CiteAs),
-		newApaEncoder(p.config.Formats.APA),
-		newCmsEncoder(p.config.Formats.CMS),
-		newMlaEncoder(p.config.Formats.MLA),
+		newApaEncoder(p.config.Formats.APA, false),
+		newCmsEncoder(p.config.Formats.CMS, false),
+		newMlaEncoder(p.config.Formats.MLA, false),
 	})
 }
 
 func (p *serviceContext) apaHandler(c *gin.Context) {
-	p.citationHandler(c, []citationType{newApaEncoder(p.config.Formats.APA)})
+	p.citationHandler(c, []citationType{newApaEncoder(p.config.Formats.APA, true)})
 }
 
 func (p *serviceContext) citeAsHandler(c *gin.Context) {
@@ -51,11 +51,11 @@ func (p *serviceContext) citeAsHandler(c *gin.Context) {
 }
 
 func (p *serviceContext) cmsHandler(c *gin.Context) {
-	p.citationHandler(c, []citationType{newCmsEncoder(p.config.Formats.CMS)})
+	p.citationHandler(c, []citationType{newCmsEncoder(p.config.Formats.CMS, true)})
 }
 
 func (p *serviceContext) mlaHandler(c *gin.Context) {
-	p.citationHandler(c, []citationType{newMlaEncoder(p.config.Formats.MLA)})
+	p.citationHandler(c, []citationType{newMlaEncoder(p.config.Formats.MLA, true)})
 }
 
 func (p *serviceContext) risHandler(c *gin.Context) {

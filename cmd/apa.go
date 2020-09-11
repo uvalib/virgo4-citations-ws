@@ -2,19 +2,21 @@ package main
 
 import (
 	"errors"
-	//"strings"
+	"strings"
 )
 
 type apaEncoder struct {
-	cfg  serviceConfigFormat
-	url  string
-	data *genericCitation
+	cfg          serviceConfigFormat
+	url          string
+	preferCiteAs bool
+	data         *genericCitation
 }
 
-func newApaEncoder(cfg serviceConfigFormat) *apaEncoder {
+func newApaEncoder(cfg serviceConfigFormat, preferCiteAs bool) *apaEncoder {
 	e := apaEncoder{}
 
 	e.cfg = cfg
+	e.preferCiteAs = preferCiteAs
 
 	return &e
 }
@@ -65,6 +67,10 @@ func (e *apaEncoder) FileName() string {
 }
 
 func (e *apaEncoder) Contents() (string, error) {
+	if e.preferCiteAs == true && len(e.data.citeAs) > 0 {
+		return strings.Join(e.data.citeAs, "\n"), nil
+	}
+
 	/*
 	   # === Author(s)
 	   # No more than seven names are listed in "Last, F. M." form.  If there
