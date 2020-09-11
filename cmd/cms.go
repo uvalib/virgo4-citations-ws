@@ -2,7 +2,7 @@ package main
 
 import (
 	"errors"
-	"strings"
+	//"strings"
 )
 
 type cmsEncoder struct {
@@ -63,10 +63,6 @@ func (e *cmsEncoder) FileName() string {
 }
 
 func (e *cmsEncoder) Contents() (string, error) {
-	if len(e.data.citeAs) > 0 {
-		return strings.Join(e.data.citeAs, "\n"), nil
-	}
-
 	/*
 	   # === Author(s)
 	   # First author in "Last, First" form; second author in "First Last" form;

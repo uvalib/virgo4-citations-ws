@@ -63,10 +63,6 @@ func (e *mlaEncoder) FileName() string {
 }
 
 func (e *mlaEncoder) Contents() (string, error) {
-	if len(e.data.citeAs) > 0 {
-		return strings.Join(e.data.citeAs, "\n"), nil
-	}
-
 	res := ""
 
 	/*

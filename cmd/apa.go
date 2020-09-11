@@ -2,7 +2,7 @@ package main
 
 import (
 	"errors"
-	"strings"
+	//"strings"
 )
 
 type apaEncoder struct {
@@ -65,10 +65,6 @@ func (e *apaEncoder) FileName() string {
 }
 
 func (e *apaEncoder) Contents() (string, error) {
-	if len(e.data.citeAs) > 0 {
-		return strings.Join(e.data.citeAs, "\n"), nil
-	}
-
 	/*
 	   # === Author(s)
 	   # No more than seven names are listed in "Last, F. M." form.  If there

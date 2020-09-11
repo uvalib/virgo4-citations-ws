@@ -91,16 +91,11 @@ func newGenericCitation(v4url string, parts citationParts, opts genericCitationO
 	c := genericCitation{opts: opts}
 	c.v4url = v4url
 
-	// check for explicit citation
-	c.citeAs = parts["explicit"]
-	if len(c.citeAs) > 0 {
-		return &c, nil
-	}
-
 	// set options
 	c.isArticle = firstElementOf(parts["format"]) == "article"
 
 	// set values
+	citeAs := parts["explicit"]
 	authors := parts["author"]
 	editors := parts["editor"]
 	advisors := parts["advisor"]
@@ -120,6 +115,7 @@ func newGenericCitation(v4url string, parts citationParts, opts genericCitationO
 	isOnlineOnly := firstElementOf(parts["is_online_only"])
 	isVirgoURL := firstElementOf(parts["is_virgo_url"])
 
+	c.setupCiteAs(citeAs)
 	c.setupAuthors(authors)
 	c.setupEditors(editors)
 	c.setupAdvisors(advisors)
@@ -162,6 +158,10 @@ func (c *genericCitation) log() {
 	log.Printf("    publisher : [%s]", c.publisher)
 	log.Printf("    date      : [%s]  (%d) (%d) (%d)", c.date, c.year, c.month, c.day)
 	log.Printf("    link      : [%s]", c.link)
+}
+
+func (c *genericCitation) setupCiteAs(citeAs []string) {
+	c.citeAs = citeAs
 }
 
 func (c *genericCitation) setupAuthors(authors []string) {
