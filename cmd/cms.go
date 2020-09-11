@@ -6,17 +6,15 @@ import (
 )
 
 type cmsEncoder struct {
-	url         string
-	extension   string
-	contentType string
-	data        *genericCitation
+	cfg  serviceConfigFormat
+	url  string
+	data *genericCitation
 }
 
 func newCmsEncoder(cfg serviceConfigFormat) *cmsEncoder {
 	e := cmsEncoder{}
 
-	e.extension = cfg.Extension
-	e.contentType = cfg.ContentType
+	e.cfg = cfg
 
 	return &e
 }
@@ -52,8 +50,12 @@ func (e *cmsEncoder) Populate(parts citationParts) error {
 	return nil
 }
 
+func (e *cmsEncoder) Label() string {
+	return e.cfg.Label
+}
+
 func (e *cmsEncoder) ContentType() string {
-	return e.contentType
+	return e.cfg.ContentType
 }
 
 func (e *cmsEncoder) FileName() string {

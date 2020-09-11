@@ -116,8 +116,9 @@ func newGenericCitation(v4url string, parts citationParts, opts genericCitationO
 	date := firstElementOf(parts["published_date"])
 	url := firstElementOf(parts["url"])
 	doi := firstElementOf(parts["doi"])
-	access := firstElementOf(parts["access"])
 	serialNumbers := parts["serial_number"]
+	isOnlineOnly := firstElementOf(parts["is_online_only"])
+	isVirgoURL := firstElementOf(parts["is_virgo_url"])
 
 	c.setupAuthors(authors)
 	c.setupEditors(editors)
@@ -130,7 +131,7 @@ func newGenericCitation(v4url string, parts citationParts, opts genericCitationO
 	c.setupEdition(edition)
 	c.setupPublisher(publisher, publishedLocation)
 	c.setupDate(date)
-	c.setupLink(url, doi, access, serialNumbers)
+	c.setupLink(url, doi, isOnlineOnly, isVirgoURL, serialNumbers)
 
 	c.log()
 
@@ -210,6 +211,8 @@ func (c *genericCitation) setupIssue(issue string) {
 }
 
 func (c *genericCitation) setupPages(pages string) {
+	// TODO: check if eds is sending correct pages (have seen 1-5 in v3, but 1-6 in v4)
+
 	fullPages := re.pages.ReplaceAllString(pages, "")
 
 	if fullPages != "" && c.opts.pagesPrefix == true {
@@ -298,7 +301,7 @@ func (c *genericCitation) setupDate(date string) {
 	}
 }
 
-func (c *genericCitation) setupLink(url, doi, access string, serialNumbers []string) {
+func (c *genericCitation) setupLink(url, doi, isOnlineOnly, isVirgoURL string, serialNumbers []string) {
 	c.link = ""
 
 	/*
@@ -354,15 +357,17 @@ func (c *genericCitation) setupLink(url, doi, access string, serialNumbers []str
 	   # notation.
 	   #
 	   def born_digital?(*)
-	     # TODO: Verify this definition...
+	     # TO-DO: Verify this definition...
 	     online_only? && isbns.blank? && issns.blank?
 	   end
 	*/
 
-	isBornDigital := access == "online_only" && len(serialNumbers) == 0
+	isBornDigital := isOnlineOnly == "true" && len(serialNumbers) == 0
 
-	// TODO: this should be limited to specific document types
-	link := c.v4url
+	link := ""
+	if isVirgoURL == "true" {
+		link = c.v4url
+	}
 
 	switch {
 	case doi != "":
@@ -379,38 +384,13 @@ func (c *genericCitation) setupLink(url, doi, access string, serialNumbers []str
 		return
 	}
 
+	fullLink := link
 	if c.opts.stripProtocol == true {
-		link = re.urlProtocol.ReplaceAllString(link, "")
+		link = re.urlProtocol.ReplaceAllString(fullLink, "")
 	}
 
-	c.link = link
+	c.link = fmt.Sprintf(`<a href="%s">%s</a>`, fullLink, link)
 }
-
-// TODO: EDS should send ISSNs with citation_type 'serial_number'
-// TODO: "access" citation part for solr pools (and others?)
-
-/*
-	// this should come from the pools:
-
-  # @see UVA::IndexDoc#online_only?
-  #
-  def online_only?
-    internet_only? ||
-      has_feature?('pda_ebook', 'has_embedded_avalon_media') ||
-      values_for(:source_facet).all? { |v| v =~ /Libra.*Repository/i } ||
-      (format = values_for(:format_facet)).include?('Coin') ||
-      (%w(Online Photographs) - format).empty? ||
-      (%w(Online Physical\ Object) - format).empty?
-  end
-
-  # @see UVA::IndexDoc#internet_only?
-  #
-  # (That is, whether "Internet materials" is its sole location.)
-  #
-  def internet_only?
-    values_for(:location_facet) == ['Internet materials']
-  end
-*/
 
 func cleanEndPunctuation(s string) string {
 	cleaned := re.fieldEnd.ReplaceAllString(s, "")

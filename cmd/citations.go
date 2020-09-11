@@ -8,6 +8,7 @@ import (
 type citationType interface {
 	Init(string)
 	Populate(citationParts) error
+	Label() string
 	ContentType() string
 	FileName() string
 	Contents() (string, error)
@@ -16,11 +17,12 @@ type citationType interface {
 type citationParts map[string][]string
 
 type citationsContext struct {
-	svc    *serviceContext
-	client *clientContext
-	url    string
-	v4url  string
-	parts  citationParts
+	svc         *serviceContext
+	client      *clientContext
+	url         string
+	v4url       string
+	parts       citationParts
+	initialized bool
 }
 
 type serviceResponse struct {
@@ -56,6 +58,10 @@ func (s *citationsContext) err(format string, args ...interface{}) {
 }
 
 func (s *citationsContext) collectCitationParts() serviceResponse {
+	if s.initialized == true {
+		return serviceResponse{status: http.StatusOK}
+	}
+
 	rec, resp := s.queryPoolRecord()
 
 	if resp.err != nil {
@@ -70,20 +76,24 @@ func (s *citationsContext) collectCitationParts() serviceResponse {
 		}
 	}
 
+	s.initialized = true
+
 	return serviceResponse{status: http.StatusOK}
 }
 
-func (s *citationsContext) handleCitationRequest(fmt citationType) serviceResponse {
+func (s *citationsContext) handleCitationRequest(fmts []citationType) serviceResponse {
 	resp := s.collectCitationParts()
 
 	if resp.err != nil {
 		return resp
 	}
 
-	fmt.Init(s.v4url)
+	for _, fmt := range fmts {
+		fmt.Init(s.v4url)
 
-	if err := fmt.Populate(s.parts); err != nil {
-		return serviceResponse{status: http.StatusInternalServerError, err: err}
+		if err := fmt.Populate(s.parts); err != nil {
+			return serviceResponse{status: http.StatusInternalServerError, err: err}
+		}
 	}
 
 	return serviceResponse{status: http.StatusOK}

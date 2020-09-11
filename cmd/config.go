@@ -22,15 +22,17 @@ type serviceConfigJWT struct {
 }
 
 type serviceConfigFormat struct {
+	Label       string `json:"label,omitempty"`
 	ContentType string `json:"content_type,omitempty"`
 	Extension   string `json:"extension,omitempty"`
 }
 
 type serviceConfigFormats struct {
-	APA serviceConfigFormat `json:"apa,omitempty"`
-	CMS serviceConfigFormat `json:"cms,omitempty"`
-	MLA serviceConfigFormat `json:"mla,omitempty"`
-	RIS serviceConfigFormat `json:"ris,omitempty"`
+	APA    serviceConfigFormat `json:"apa,omitempty"`
+	CiteAs serviceConfigFormat `json:"cite_as,omitempty"`
+	CMS    serviceConfigFormat `json:"cms,omitempty"`
+	MLA    serviceConfigFormat `json:"mla,omitempty"`
+	RIS    serviceConfigFormat `json:"ris,omitempty"`
 }
 
 type serviceConfig struct {

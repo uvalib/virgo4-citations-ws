@@ -6,17 +6,15 @@ import (
 )
 
 type apaEncoder struct {
-	url         string
-	extension   string
-	contentType string
-	data        *genericCitation
+	cfg  serviceConfigFormat
+	url  string
+	data *genericCitation
 }
 
 func newApaEncoder(cfg serviceConfigFormat) *apaEncoder {
 	e := apaEncoder{}
 
-	e.extension = cfg.Extension
-	e.contentType = cfg.ContentType
+	e.cfg = cfg
 
 	return &e
 }
@@ -54,8 +52,12 @@ func (e *apaEncoder) Populate(parts citationParts) error {
 	return nil
 }
 
+func (e *apaEncoder) Label() string {
+	return e.cfg.Label
+}
+
 func (e *apaEncoder) ContentType() string {
-	return e.contentType
+	return e.cfg.ContentType
 }
 
 func (e *apaEncoder) FileName() string {

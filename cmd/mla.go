@@ -6,17 +6,15 @@ import (
 )
 
 type mlaEncoder struct {
-	url         string
-	extension   string
-	contentType string
-	data        *genericCitation
+	cfg  serviceConfigFormat
+	url  string
+	data *genericCitation
 }
 
 func newMlaEncoder(cfg serviceConfigFormat) *mlaEncoder {
 	e := mlaEncoder{}
 
-	e.extension = cfg.Extension
-	e.contentType = cfg.ContentType
+	e.cfg = cfg
 
 	return &e
 }
@@ -52,8 +50,12 @@ func (e *mlaEncoder) Populate(parts citationParts) error {
 	return nil
 }
 
+func (e *mlaEncoder) Label() string {
+	return e.cfg.Label
+}
+
 func (e *mlaEncoder) ContentType() string {
-	return e.contentType
+	return e.cfg.ContentType
 }
 
 func (e *mlaEncoder) FileName() string {

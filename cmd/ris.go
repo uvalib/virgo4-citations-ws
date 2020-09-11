@@ -33,11 +33,10 @@ const risLineFormat = "%s  - %s" + risLineEnding
 type tagValueMap map[string][]string
 
 type risEncoder struct {
-	url         string
-	extension   string
-	contentType string
-	tagValues   tagValueMap
-	policy      *bluemonday.Policy
+	cfg       serviceConfigFormat
+	url       string
+	tagValues tagValueMap
+	policy    *bluemonday.Policy
 }
 
 var risPartsMap map[string][]string
@@ -47,8 +46,7 @@ var risAppendMap map[string]string
 func newRisEncoder(cfg serviceConfigFormat) *risEncoder {
 	e := risEncoder{}
 
-	e.extension = cfg.Extension
-	e.contentType = cfg.ContentType
+	e.cfg = cfg
 	e.tagValues = make(tagValueMap)
 	e.policy = bluemonday.UGCPolicy()
 
@@ -97,15 +95,19 @@ func (e *risEncoder) addTagValue(risTag, value string) {
 	e.tagValues[tag] = append(e.tagValues[tag], value)
 }
 
+func (e *risEncoder) Label() string {
+	return e.cfg.Label
+}
+
 func (e *risEncoder) ContentType() string {
-	return e.contentType
+	return e.cfg.ContentType
 }
 
 func (e *risEncoder) FileName() string {
 	filename := path.Base(e.url)
 
-	if e.extension != "" {
-		filename += "." + e.extension
+	if e.cfg.Extension != "" {
+		filename += "." + e.cfg.Extension
 	}
 
 	return filename

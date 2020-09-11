@@ -47,6 +47,7 @@ func main() {
 	router.GET("/healthcheck", svc.healthCheckHandler)
 
 	if format := router.Group("/format"); format != nil {
+		format.GET("/all", svc.allHandler)
 		format.GET("/apa", svc.apaHandler)
 		format.GET("/cms", svc.cmsHandler)
 		format.GET("/mla", svc.mlaHandler)
