@@ -29,25 +29,27 @@ var nameSuffixes map[string]bool
 
 // data common among CMS/APA/MLA citations
 type genericCitation struct {
-	v4url     string
-	opts      genericCitationOpts
-	isArticle bool
-	citeAs    []string
-	authors   []string
-	editors   []string
-	advisors  []string
-	title     string
-	journal   string
-	volume    string
-	issue     string
-	pages     string
-	edition   string
-	publisher string
-	date      string
-	link      string
-	year      int
-	month     int
-	day       int
+	v4url       string
+	opts        genericCitationOpts
+	isArticle   bool
+	citeAs      []string
+	authors     []string
+	editors     []string
+	advisors    []string
+	compilers   []string
+	translators []string
+	title       string
+	journal     string
+	volume      string
+	issue       string
+	pages       string
+	edition     string
+	publisher   string
+	date        string
+	link        string
+	year        int
+	month       int
+	day         int
 }
 
 // options to control the slight differences in data population
@@ -99,6 +101,8 @@ func newGenericCitation(v4url string, parts citationParts, opts genericCitationO
 	authors := parts["author"]
 	editors := parts["editor"]
 	advisors := parts["advisor"]
+	compilers := parts["compiler"]
+	translators := parts["translator"]
 	title := firstElementOf(parts["title"])
 	subtitle := firstElementOf(parts["subtitle"])
 	journal := firstElementOf(parts["journal"])
@@ -119,6 +123,8 @@ func newGenericCitation(v4url string, parts citationParts, opts genericCitationO
 	c.setupAuthors(authors)
 	c.setupEditors(editors)
 	c.setupAdvisors(advisors)
+	c.setupCompilers(compilers)
+	c.setupTranslators(translators)
 	c.setupTitle(title, subtitle)
 	c.setupJournal(journal)
 	c.setupVolume(volume)
@@ -138,26 +144,34 @@ func (c *genericCitation) log() {
 	log.Printf("generic citation:")
 
 	for _, author := range c.authors {
-		log.Printf("    author    : [%s]", author)
+		log.Printf("    author     : [%s]", author)
 	}
 
 	for _, editor := range c.editors {
-		log.Printf("    editor    : [%s]", editor)
+		log.Printf("    editor     : [%s]", editor)
 	}
 
 	for _, advisor := range c.advisors {
-		log.Printf("    advisor   : [%s]", advisor)
+		log.Printf("    advisor    : [%s]", advisor)
 	}
 
-	log.Printf("    title     : [%s]", c.title)
-	log.Printf("    journal   : [%s]", c.journal)
-	log.Printf("    volume    : [%s]", c.volume)
-	log.Printf("    issue     : [%s]", c.issue)
-	log.Printf("    pages     : [%s]", c.pages)
-	log.Printf("    edition   : [%s]", c.edition)
-	log.Printf("    publisher : [%s]", c.publisher)
-	log.Printf("    date      : [%s]  (%d) (%d) (%d)", c.date, c.year, c.month, c.day)
-	log.Printf("    link      : [%s]", c.link)
+	for _, compiler := range c.compilers {
+		log.Printf("    compiler   : [%s]", compiler)
+	}
+
+	for _, translator := range c.translators {
+		log.Printf("    translator : [%s]", translator)
+	}
+
+	log.Printf("    title      : [%s]", c.title)
+	log.Printf("    journal    : [%s]", c.journal)
+	log.Printf("    volume     : [%s]", c.volume)
+	log.Printf("    issue      : [%s]", c.issue)
+	log.Printf("    pages      : [%s]", c.pages)
+	log.Printf("    edition    : [%s]", c.edition)
+	log.Printf("    publisher  : [%s]", c.publisher)
+	log.Printf("    date       : [%s]  (%d) (%d) (%d)", c.date, c.year, c.month, c.day)
+	log.Printf("    link       : [%s]", c.link)
 }
 
 func (c *genericCitation) setupCiteAs(citeAs []string) {
@@ -174,6 +188,14 @@ func (c *genericCitation) setupEditors(editors []string) {
 
 func (c *genericCitation) setupAdvisors(advisors []string) {
 	c.advisors = advisors
+}
+
+func (c *genericCitation) setupCompilers(compilers []string) {
+	c.compilers = compilers
+}
+
+func (c *genericCitation) setupTranslators(translators []string) {
+	c.translators = translators
 }
 
 func (c *genericCitation) setupTitle(title, subtitle string) {
