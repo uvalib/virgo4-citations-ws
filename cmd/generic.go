@@ -636,7 +636,8 @@ func monthName(m int) string {
 	}
 
 	t := time.Month(m)
-	return t.String()[:3]
+
+	return t.String()
 }
 
 func init() {

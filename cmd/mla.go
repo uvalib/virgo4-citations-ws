@@ -274,30 +274,97 @@ func (e *mlaEncoder) Contents() (string, error) {
 	res = mlaAddPart(res, e.data.issue)
 
 	/*
-	   # === Date of publication
-	   # Should be "YYYY" for a book; "[Day] Mon. YYYY" for an article.
-	   if date.present?
-	     date_string = export_date(date, month_names: true)
-	     year, month, day = (date_string || date).split('/')
-	     month = "#{month[0,3]}." if month && (month.size > 3)
-	     if year && month && day && is_article
-	       date = "#{day} #{month} #{year}"
-	     elsif year && month && is_article
-	       date = "#{year}, #{month}"
-	     elsif year
-	       date = year.sub(/^(\d{4}).*$/, '\1')
-	     end
-	     unless result.blank?
-	       result << ','   unless result.end_with?(SPACE, '.', ',')
-	       result << SPACE unless result.end_with?(SPACE)
-	     end
-	     result << date
-	   end
+		   # === Date of publication
+		   # Should be "YYYY" for a book; "[Day] Mon. YYYY" for an article.
+		   if date.present?
+		     date_string = export_date(date, month_names: true)
+		     year, month, day = (date_string || date).split('/')
+		     month = "#{month[0,3]}." if month && (month.size > 3)
+		     if year && month && day && is_article
+		       date = "#{day} #{month} #{year}"
+		     elsif year && month && is_article
+		       date = "#{year}, #{month}"
+		     elsif year
+		       date = year.sub(/^(\d{4}).*$/, '\1')
+		     end
+		     unless result.blank?
+		       result << ','   unless result.end_with?(SPACE, '.', ',')
+		       result << SPACE unless result.end_with?(SPACE)
+		     end
+		     result << date
+		   end
+
+	    # Format a date string for use with export formats.
+	    #
+	    # @param [String] value
+	    # @param [Hash]   opt
+	    #
+	    # @option opt [String]  :separator
+	    # @option opt [Boolean] :allow_extra_text
+	    # @option opt [Boolean] :default_20th_century
+	    # @option opt [Boolean] :month_names
+	    #
+	    # @return [String]
+	    # @return [nil]                 If the string did not have a date value.
+	    #
+	    def export_date(value, opt = {})
+	      yy = mm = dd = xx = nil
+	      case value
+	        when DATE_MM_DD_YY then mm, dd, yy, xx = $LAST_MATCH_INFO[1,4]
+	        when DATE_YY_MM_DD then yy, mm, dd, xx = $LAST_MATCH_INFO[1,4]
+	        when DATE_MM_YY    then mm, yy, xx = $LAST_MATCH_INFO[1,3]
+	        when DATE_YY_MM    then yy, mm, xx = $LAST_MATCH_INFO[1,3]
+	        when DATE_YY       then yy, xx = $LAST_MATCH_INFO[1,2]
+	      end
+	      return if yy.blank?
+	      opt = {
+	        separator:            '/',
+	        allow_extra_text:     false,
+	        default_20th_century: true,
+	        month_names:          false,
+	      }.merge(opt)
+	      if mm.blank?
+	        mm = nil
+	      elsif opt[:month_names]
+	        mm = Date.const_get(:MONTHNAMES)[mm.to_i]
+	      end
+	      dd = nil if dd.blank?
+	      xx = xx.delete(opt[:separator]) if xx.present?
+	      xx = nil if xx.blank? || !opt[:allow_extra_text]
+
+	      # Adjust year, with the heuristic that two-digit years are actually
+	      # years from the 20th century.
+	      result =
+	        case yy.length
+	          when 3 then "0#{yy}"
+	          when 2 then opt[:default_20th_century] ? "19#{yy}" : "00#{yy}"
+	          when 1 then "000#{yy}"
+	          else        yy
+	        end
+
+	      # Zero-fill the month; if there is extra text a slash is needed even if
+	      # the value is missing.
+	      result << opt[:separator] if mm || xx
+	      result << ((mm.length == 1) ? "0#{mm}" : mm) if mm
+
+	      # Zero-fill the day; if there is extra text a slash is needed even if the
+	      # value is missing.
+	      result << opt[:separator] if dd || xx
+	      result << ((dd.length == 1) ? "0#{dd}" : dd) if dd
+
+	      # Append the extra text if present.
+	      result << "#{opt[:separator]}#{xx}" if xx
+	      result
+	    end
 	*/
 
 	if e.data.date != "" {
 		date := ""
+
 		month := monthName(e.data.month)
+		if len(month) > 3 {
+			month = month[:3] + "."
+		}
 
 		switch {
 		case e.data.isArticle && e.data.year != 0 && month != "" && e.data.day != 0:
