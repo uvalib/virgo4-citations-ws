@@ -211,8 +211,6 @@ func (c *genericCitation) setupIssue(issue string) {
 }
 
 func (c *genericCitation) setupPages(pages string) {
-	// TODO: check if eds is sending correct pages (have seen 1-5 in v3, but 1-6 in v4)
-
 	fullPages := re.pages.ReplaceAllString(pages, "")
 
 	if fullPages != "" && c.opts.pagesPrefix == true {
@@ -294,9 +292,9 @@ func (c *genericCitation) setupDate(date string) {
 		c.year = t.Year()
 		// TODO: check if eds pool is effectively sending 01 placeholders for unknown MM and DD.
 		// have seen records citations in V3 with just a year, but in V4 they would be 1/1 of
-		// that year, since the eds pool is sending YYYY-01-01.  until known, omit month/day:
-		//c.month = int(t.Month())
-		//c.day = t.Day()
+		// that year, since the eds pool is sending YYYY-01-01.  until known, just trust month/day:
+		c.month = int(t.Month())
+		c.day = t.Day()
 		return
 	}
 }
