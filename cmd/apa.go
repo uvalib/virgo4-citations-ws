@@ -1,7 +1,7 @@
 package main
 
 import (
-	"errors"
+	"fmt"
 	"strings"
 )
 
@@ -71,6 +71,8 @@ func (e *apaEncoder) Contents() (string, error) {
 		return strings.Join(e.data.citeAs, "\n"), nil
 	}
 
+	res := ""
+
 	/*
 	   # === Author(s)
 	   # No more than seven names are listed in "Last, F. M." form.  If there
@@ -98,7 +100,45 @@ func (e *apaEncoder) Contents() (string, error) {
 	       result << " (Ed#{s}.)."
 	     end
 	   end
+	*/
 
+	if len(e.data.authors) > 0 {
+		var authors []string
+		for _, author := range e.data.authors {
+			// FIXME
+			authors = append(authors, author)
+		}
+
+		var last string
+
+		total := len(authors)
+
+		last, authors = authors[len(authors)-1], authors[:len(authors)-1]
+
+		switch {
+		case total == 1:
+			res += last
+
+		case (total >= 2) && (total <= 7):
+			res += strings.Join(authors, ", ") + ", &amp; " + last
+
+		default:
+			res += strings.Join(authors[0:6], ", ") + ", ... " + last
+		}
+
+		nonEditors := removeEntries(e.data.authors, e.data.editors)
+
+		if len(nonEditors) == 0 {
+			s := ""
+			if total > 1 {
+				s = "s"
+			}
+
+			res += "(Ed" + s + ".)."
+		}
+	}
+
+	/*
 	   # === Date of publication
 	   # Should be "(YYYY)" for a book; "(YYYY, Month [Day])" for an article.
 	   if date.blank?
@@ -116,7 +156,36 @@ func (e *apaEncoder) Contents() (string, error) {
 	     end
 	     result << "(#{date})."
 	   end
+	*/
 
+	if e.data.date != "" {
+		if res != "" && strings.HasSuffix(res, " ") == false {
+			res += " "
+		}
+
+		date := ""
+
+		month := monthName(e.data.month)
+
+		switch {
+		case e.data.isArticle && e.data.year != 0 && month != "" && e.data.day != 0:
+			date = fmt.Sprintf("%d, %s %d", e.data.year, month, e.data.day)
+
+		case e.data.isArticle && e.data.year != 0 && month != "":
+			date = fmt.Sprintf("%d, %s", e.data.year, month)
+
+		case e.data.year != 0:
+			date = fmt.Sprintf("%d", e.data.year)
+		}
+
+		res += "(" + date + ")."
+	} else {
+		if res != "" && strings.HasSuffix(res, ".") == false {
+			res += "."
+		}
+	}
+
+	/*
 	   # === Item Title
 	   # The title is in sentence-case (only the first word and proper nouns
 	   # are capitalized); if there is a sub-title, it also has the first word
@@ -126,7 +195,23 @@ func (e *apaEncoder) Contents() (string, error) {
 	     title = clean_end_punctuation(title)
 	     result << (is_article ? title : "<em>#{title}</em>")
 	   end
+	*/
 
+	if e.data.title != "" {
+		if res != "" && strings.HasSuffix(res, " ") == false {
+			res += " "
+		}
+
+		title := cleanEndPunctuation(e.data.title)
+
+		if e.data.isArticle == true {
+			res += title
+		} else {
+			res += "<em>" + title + "</em>"
+		}
+	}
+
+	/*
 	   # === Container Editors
 	   if editors.present?
 	     unless result.blank?
@@ -143,7 +228,11 @@ func (e *apaEncoder) Contents() (string, error) {
 	         else           list[0,6].join(', ') + ', ... ' + final_editor
 	       end
 	   end
+	*/
 
+	// NOTE: these are journal editors (as opposed to book editors); not yet implemented
+
+	/*
 	   # === Container Title
 	   # Journal titles are capitalized like MLA titles.
 	   if journal.present?
@@ -154,7 +243,20 @@ func (e *apaEncoder) Contents() (string, error) {
 	     journal = mla_citation_title(journal)
 	     result << "<em>#{journal}</em>"
 	   end
+	*/
 
+	if e.data.journal != "" {
+		if res != "" && strings.HasSuffix(res, " ") == false && strings.HasSuffix(res, ".") == false && strings.HasSuffix(res, ",") == false {
+			res += "."
+		}
+		if res != "" && strings.HasSuffix(res, " ") == false {
+			res += " "
+		}
+
+		res += "<em>" + mlaTitle(e.data.journal) + "</em>"
+	}
+
+	/*
 	   # === Version/Edition
 	   if edition.present?
 	     result << SPACE unless result.blank? || result.end_with?(SPACE)
@@ -163,7 +265,21 @@ func (e *apaEncoder) Contents() (string, error) {
 	   elsif journal.blank?
 	     result << '.' unless result.end_with?('.')
 	   end
+	*/
 
+	if e.data.edition != "" {
+		if res != "" && strings.HasSuffix(res, " ") == false {
+			res += " "
+		}
+
+		res += "(" + cleanEndPunctuation(e.data.edition) + ")."
+	} else if e.data.journal == "" {
+		if res != "" && strings.HasSuffix(res, ".") == false {
+			res += "."
+		}
+	}
+
+	/*
 	   # === Volume
 	   if volume.present?
 	     unless result.blank?
@@ -172,7 +288,20 @@ func (e *apaEncoder) Contents() (string, error) {
 	     end
 	     result << clean_end_punctuation(volume)
 	   end
+	*/
 
+	if e.data.volume != "" {
+		if res != "" && strings.HasSuffix(res, " ") == false && strings.HasSuffix(res, ".") == false && strings.HasSuffix(res, ",") == false {
+			res += ","
+		}
+		if res != "" && strings.HasSuffix(res, " ") == false {
+			res += " "
+		}
+
+		res += cleanEndPunctuation(e.data.volume)
+	}
+
+	/*
 	   # === Issue
 	   if issue.present?
 	     if volume.blank?
@@ -181,7 +310,19 @@ func (e *apaEncoder) Contents() (string, error) {
 	     issue = clean_end_punctuation(issue)
 	     result << "(#{issue})"
 	   end
+	*/
 
+	if e.data.issue != "" {
+		if e.data.volume == "" {
+			if res != "" && strings.HasSuffix(res, " ") == false {
+				res += " "
+			}
+		}
+
+		res += "(" + cleanEndPunctuation(e.data.issue) + ")"
+	}
+
+	/*
 	   # === Pages
 	   # For articles, pages do not include "p." or "pp." *except* for articles
 	   # in a newspaper.
@@ -192,7 +333,20 @@ func (e *apaEncoder) Contents() (string, error) {
 	     end
 	     result << pages
 	   end
+	*/
 
+	if e.data.pages != "" {
+		if res != "" && strings.HasSuffix(res, " ") == false && strings.HasSuffix(res, ".") == false && strings.HasSuffix(res, ",") == false {
+			res += ","
+		}
+		if res != "" && strings.HasSuffix(res, " ") == false {
+			res += " "
+		}
+
+		res += e.data.pages
+	}
+
+	/*
 	   # === Accession Number (for archival collections)
 	   if an.present?
 	     unless result.blank?
@@ -201,7 +355,11 @@ func (e *apaEncoder) Contents() (string, error) {
 	     end
 	     result << an
 	   end
+	*/
 
+	// NOTE: archival items should all have a cite_as entry, obviating the need to handle accession number
+
+	/*
 	   # === Publisher
 	   if publisher.present?
 	     unless result.blank?
@@ -211,10 +369,29 @@ func (e *apaEncoder) Contents() (string, error) {
 	     result << publisher
 	     result << '.'
 	   end
+	*/
 
+	if e.data.publisher != "" {
+		if res != "" && strings.HasSuffix(res, " ") == false && strings.HasSuffix(res, ".") == false && strings.HasSuffix(res, ",") == false {
+			res += ","
+		}
+		if res != "" && strings.HasSuffix(res, " ") == false {
+			res += " "
+		}
+
+		res += e.data.publisher + "."
+	}
+
+	/*
 	   # The end of the citation proper should be a period.
 	   result << '.' unless result.blank? || result.end_with?('.')
+	*/
 
+	if res != "" && strings.HasSuffix(res, ".") == false {
+		res += "."
+	}
+
+	/*
 	   # === URL/DOI
 	   if link.present?
 	     result << SPACE unless result.blank? || result.end_with?(SPACE)
@@ -225,5 +402,13 @@ func (e *apaEncoder) Contents() (string, error) {
 	   result
 	*/
 
-	return "", errors.New("non-explicit APA citations not yet implemented")
+	if e.data.link != "" {
+		if res != "" && strings.HasSuffix(res, " ") == false {
+			res += " "
+		}
+
+		res += "Retrieved from " + e.data.link
+	}
+
+	return res, nil
 }
