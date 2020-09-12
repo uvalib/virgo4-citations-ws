@@ -648,6 +648,67 @@ func readingOrder(name string) string {
 	return fmt.Sprintf("%s%s%s", otherNames, lastName, suffixes)
 }
 
+func abbreviateName(name string) string {
+	// TODO: implement me
+
+	/*
+	   # Transforms the form "last_name[, first_name [middle_names][, suffix]"
+	   # into the form "last_name[, initials][, suffix]".
+	   #
+	   # For now it's assumed that if a name has parentheses then it's probably a
+	   # corporate name that can't be "abbreviated" in this way.  Names like this
+	   # are returned unmodified.
+	   #
+	   # @param [String] name
+	   #
+	   # @return [String]
+	   #
+	   # Replaces:
+	   # @see Blacklight::Solr::Document::MarcExport#abbreviate_name
+	   #
+	   def abbreviate_name(name, *)
+	     name = name.to_s.squish
+	     return name if name.blank?
+
+	     # Assuming this is a corporate name.
+	     return name if name.include?('(') || name.include?(')')
+
+	     # If there are no commas then assume this a corporate name or a person
+	     # with only one name (e.g. "Christo", "Michelangelo").  Remove date(s)
+	     # from the end if the name includes them.
+	     parts  = name.split(',').map(&:strip).reject(&:blank?)
+	     result = parts.shift.to_s
+	     parts.pop if parts.last =~ /\d{4}/
+
+	     # The rest of the parts (first name and/or middle name(s)) are turned
+	     # into initials.  However, suffixes remain untouched:
+	     # (1) Roman numerals (e.g. "Henry VIII")
+	     # (2) Suffix         (e.g. "Martin Luther King, Jr.")
+	     if parts.present?
+	       result << ', '
+	       result <<
+	         parts.map { |part|
+	           part.split(SPACE).map { |s|
+	             next if LOWERCASE_WORDS.include?(s)
+	             keep = s.include?('.')
+	             keep ||= (s =~ /^([IX][IVX]*|VI*)$/i)   # (1)
+	             keep ||= NAME_SUFFIX_WORDS.include?(s)  # (2)
+	             keep ? s : "#{s[0]}."
+	           }.compact.join(SPACE)
+	         }.join(', ')
+	     end
+
+	     capitalize(result)
+	   end
+	*/
+
+	if strings.TrimSpace(name) == "" || strings.Contains(name, ")") == true || strings.Contains(name, "(") == true {
+		return name
+	}
+
+	return name
+}
+
 func doubleToSingleQuotes(s string) string {
 	return re.doubleQuoted.ReplaceAllString(s, `'`)
 }

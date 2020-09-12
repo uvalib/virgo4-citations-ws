@@ -406,34 +406,34 @@ func (e *cmsEncoder) Contents() (string, error) {
 }
 
 func cmsNames(authors []string) string {
-/*
-    # Format a list of names for Chicago Manual of Style citations.
-    #
-    # @param [Array<String>] names    One or more personal or corporate names.
-    # @param [Boolean]       authors  Treat as author names if *true*.
-    #
-    # @return [String]
-    #
-    # === Usage Notes
-    # For author citations use `cmos_names(src, true)` to emit the first listed
-    # name in bibliographic order (with the surname first).  Otherwise all
-    # names are emitted in reading order (with the surname last).
-    #
-    def cmos_names(names, authors = false)
-      total  = names.size
-      et_al  = (total > 10)
-      names  = et_al ? names.take(7) : names.dup
-      first  = names.shift
-      result = authors ? capitalize(first.dup) : name_reverse(first)
-      if names.present?
-        names.map! { |n| name_reverse(n) }
-        final = et_al ? 'et al' : "and #{names.pop}"
-        result << ', ' << names.join(', ') unless names.blank?
-        result << ' ' << final
-      end
-      clean_end_punctuation(result)
-    end
-*/
+	/*
+	   # Format a list of names for Chicago Manual of Style citations.
+	   #
+	   # @param [Array<String>] names    One or more personal or corporate names.
+	   # @param [Boolean]       authors  Treat as author names if *true*.
+	   #
+	   # @return [String]
+	   #
+	   # === Usage Notes
+	   # For author citations use `cmos_names(src, true)` to emit the first listed
+	   # name in bibliographic order (with the surname first).  Otherwise all
+	   # names are emitted in reading order (with the surname last).
+	   #
+	   def cmos_names(names, authors = false)
+	     total  = names.size
+	     et_al  = (total > 10)
+	     names  = et_al ? names.take(7) : names.dup
+	     first  = names.shift
+	     result = authors ? capitalize(first.dup) : name_reverse(first)
+	     if names.present?
+	       names.map! { |n| name_reverse(n) }
+	       final = et_al ? 'et al' : "and #{names.pop}"
+	       result << ', ' << names.join(', ') unless names.blank?
+	       result << ' ' << final
+	     end
+	     clean_end_punctuation(result)
+	   end
+	*/
 	res := ""
 
 	total := len(authors)

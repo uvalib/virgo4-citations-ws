@@ -36,9 +36,9 @@ func (p *serviceContext) citationHandler(c *gin.Context, citations []citationTyp
 func (p *serviceContext) allHandler(c *gin.Context) {
 	p.citationHandler(c, []citationType{
 		newCiteAsEncoder(p.config.Formats.CiteAs),
+		newMlaEncoder(p.config.Formats.MLA, false),
 		newApaEncoder(p.config.Formats.APA, false),
 		newCmsEncoder(p.config.Formats.CMS, false),
-		newMlaEncoder(p.config.Formats.MLA, false),
 	})
 }
 

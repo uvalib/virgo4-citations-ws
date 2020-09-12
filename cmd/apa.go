@@ -106,7 +106,7 @@ func (e *apaEncoder) Contents() (string, error) {
 		var authors []string
 		for _, author := range e.data.authors {
 			// FIXME
-			authors = append(authors, author)
+			authors = append(authors, abbreviateName(author))
 		}
 
 		var last string
