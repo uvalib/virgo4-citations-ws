@@ -100,9 +100,11 @@ func (e *mlaEncoder) Contents() (string, error) {
 	   end
 	*/
 
-	authors := removeEntries(e.data.authors, []string{e.data.publisher})
-	editors := removeEntries(e.data.editors, []string{e.data.publisher})
-	advisors := removeEntries(e.data.advisors, []string{e.data.publisher})
+	remove := []string{e.data.publisher}
+
+	authors := removeEntries(e.data.authors, remove)
+	editors := removeEntries(e.data.editors, remove)
+	advisors := removeEntries(e.data.advisors, remove)
 
 	var creators []string
 	creators = append(creators, authors...)
@@ -162,7 +164,7 @@ func (e *mlaEncoder) Contents() (string, error) {
 			res += " "
 		}
 
-		title := mlaCitationTitle(e.data.title)
+		title := mlaTitle(e.data.title)
 
 		if e.data.isArticle == true {
 			res += `"` + doubleToSingleQuotes(title) + `."`
@@ -185,7 +187,7 @@ func (e *mlaEncoder) Contents() (string, error) {
 			res += " "
 		}
 
-		res += "<em>" + mlaCitationTitle(e.data.journal) + "</em>"
+		res += "<em>" + mlaTitle(e.data.journal) + "</em>"
 	}
 
 	/*
@@ -199,7 +201,7 @@ func (e *mlaEncoder) Contents() (string, error) {
 	   end
 	*/
 
-	res = mlaAddPart(res, cleanEndPunctuation(e.data.edition))
+	res = appendCitation(res, cleanEndPunctuation(e.data.edition))
 
 	/*
 	   # === Container Editors
@@ -245,7 +247,7 @@ func (e *mlaEncoder) Contents() (string, error) {
 	   end
 	*/
 
-	res = mlaAddPart(res, e.data.publisher)
+	res = appendCitation(res, e.data.publisher)
 
 	/*
 	   # === Volume
@@ -258,7 +260,7 @@ func (e *mlaEncoder) Contents() (string, error) {
 	   end
 	*/
 
-	res = mlaAddPart(res, e.data.volume)
+	res = appendCitation(res, e.data.volume)
 
 	/*
 	   # === Issue
@@ -271,91 +273,91 @@ func (e *mlaEncoder) Contents() (string, error) {
 	   end
 	*/
 
-	res = mlaAddPart(res, e.data.issue)
+	res = appendCitation(res, e.data.issue)
 
 	/*
-		   # === Date of publication
-		   # Should be "YYYY" for a book; "[Day] Mon. YYYY" for an article.
-		   if date.present?
-		     date_string = export_date(date, month_names: true)
-		     year, month, day = (date_string || date).split('/')
-		     month = "#{month[0,3]}." if month && (month.size > 3)
-		     if year && month && day && is_article
-		       date = "#{day} #{month} #{year}"
-		     elsif year && month && is_article
-		       date = "#{year}, #{month}"
-		     elsif year
-		       date = year.sub(/^(\d{4}).*$/, '\1')
-		     end
-		     unless result.blank?
-		       result << ','   unless result.end_with?(SPACE, '.', ',')
-		       result << SPACE unless result.end_with?(SPACE)
-		     end
-		     result << date
-		   end
+			   # === Date of publication
+			   # Should be "YYYY" for a book; "[Day] Mon. YYYY" for an article.
+			   if date.present?
+			     date_string = export_date(date, month_names: true)
+			     year, month, day = (date_string || date).split('/')
+			     month = "#{month[0,3]}." if month && (month.size > 3)
+			     if year && month && day && is_article
+			       date = "#{day} #{month} #{year}"
+			     elsif year && month && is_article
+			       date = "#{year}, #{month}"
+			     elsif year
+			       date = year.sub(/^(\d{4}).*$/, '\1')
+			     end
+			     unless result.blank?
+			       result << ','   unless result.end_with?(SPACE, '.', ',')
+			       result << SPACE unless result.end_with?(SPACE)
+			     end
+			     result << date
+			   end
 
-	    # Format a date string for use with export formats.
-	    #
-	    # @param [String] value
-	    # @param [Hash]   opt
-	    #
-	    # @option opt [String]  :separator
-	    # @option opt [Boolean] :allow_extra_text
-	    # @option opt [Boolean] :default_20th_century
-	    # @option opt [Boolean] :month_names
-	    #
-	    # @return [String]
-	    # @return [nil]                 If the string did not have a date value.
-	    #
-	    def export_date(value, opt = {})
-	      yy = mm = dd = xx = nil
-	      case value
-	        when DATE_MM_DD_YY then mm, dd, yy, xx = $LAST_MATCH_INFO[1,4]
-	        when DATE_YY_MM_DD then yy, mm, dd, xx = $LAST_MATCH_INFO[1,4]
-	        when DATE_MM_YY    then mm, yy, xx = $LAST_MATCH_INFO[1,3]
-	        when DATE_YY_MM    then yy, mm, xx = $LAST_MATCH_INFO[1,3]
-	        when DATE_YY       then yy, xx = $LAST_MATCH_INFO[1,2]
-	      end
-	      return if yy.blank?
-	      opt = {
-	        separator:            '/',
-	        allow_extra_text:     false,
-	        default_20th_century: true,
-	        month_names:          false,
-	      }.merge(opt)
-	      if mm.blank?
-	        mm = nil
-	      elsif opt[:month_names]
-	        mm = Date.const_get(:MONTHNAMES)[mm.to_i]
-	      end
-	      dd = nil if dd.blank?
-	      xx = xx.delete(opt[:separator]) if xx.present?
-	      xx = nil if xx.blank? || !opt[:allow_extra_text]
+		    # Format a date string for use with export formats.
+		    #
+		    # @param [String] value
+		    # @param [Hash]   opt
+		    #
+		    # @option opt [String]  :separator
+		    # @option opt [Boolean] :allow_extra_text
+		    # @option opt [Boolean] :default_20th_century
+		    # @option opt [Boolean] :month_names
+		    #
+		    # @return [String]
+		    # @return [nil]                 If the string did not have a date value.
+		    #
+		    def export_date(value, opt = {})
+		      yy = mm = dd = xx = nil
+		      case value
+		        when DATE_MM_DD_YY then mm, dd, yy, xx = $LAST_MATCH_INFO[1,4]
+		        when DATE_YY_MM_DD then yy, mm, dd, xx = $LAST_MATCH_INFO[1,4]
+		        when DATE_MM_YY    then mm, yy, xx = $LAST_MATCH_INFO[1,3]
+		        when DATE_YY_MM    then yy, mm, xx = $LAST_MATCH_INFO[1,3]
+		        when DATE_YY       then yy, xx = $LAST_MATCH_INFO[1,2]
+		      end
+		      return if yy.blank?
+		      opt = {
+		        separator:            '/',
+		        allow_extra_text:     false,
+		        default_20th_century: true,
+		        month_names:          false,
+		      }.merge(opt)
+		      if mm.blank?
+		        mm = nil
+		      elsif opt[:month_names]
+		        mm = Date.const_get(:MONTHNAMES)[mm.to_i]
+		      end
+		      dd = nil if dd.blank?
+		      xx = xx.delete(opt[:separator]) if xx.present?
+		      xx = nil if xx.blank? || !opt[:allow_extra_text]
 
-	      # Adjust year, with the heuristic that two-digit years are actually
-	      # years from the 20th century.
-	      result =
-	        case yy.length
-	          when 3 then "0#{yy}"
-	          when 2 then opt[:default_20th_century] ? "19#{yy}" : "00#{yy}"
-	          when 1 then "000#{yy}"
-	          else        yy
-	        end
+		      # Adjust year, with the heuristic that two-digit years are actually
+		      # years from the 20th century.
+		      result =
+		        case yy.length
+		          when 3 then "0#{yy}"
+		          when 2 then opt[:default_20th_century] ? "19#{yy}" : "00#{yy}"
+		          when 1 then "000#{yy}"
+		          else        yy
+		        end
 
-	      # Zero-fill the month; if there is extra text a slash is needed even if
-	      # the value is missing.
-	      result << opt[:separator] if mm || xx
-	      result << ((mm.length == 1) ? "0#{mm}" : mm) if mm
+		      # Zero-fill the month; if there is extra text a slash is needed even if
+		      # the value is missing.
+		      result << opt[:separator] if mm || xx
+		      result << ((mm.length == 1) ? "0#{mm}" : mm) if mm
 
-	      # Zero-fill the day; if there is extra text a slash is needed even if the
-	      # value is missing.
-	      result << opt[:separator] if dd || xx
-	      result << ((dd.length == 1) ? "0#{dd}" : dd) if dd
+		      # Zero-fill the day; if there is extra text a slash is needed even if the
+		      # value is missing.
+		      result << opt[:separator] if dd || xx
+		      result << ((dd.length == 1) ? "0#{dd}" : dd) if dd
 
-	      # Append the extra text if present.
-	      result << "#{opt[:separator]}#{xx}" if xx
-	      result
-	    end
+		      # Append the extra text if present.
+		      result << "#{opt[:separator]}#{xx}" if xx
+		      result
+		    end
 	*/
 
 	if e.data.date != "" {
@@ -377,7 +379,7 @@ func (e *mlaEncoder) Contents() (string, error) {
 			date = fmt.Sprintf("%d", e.data.year)
 		}
 
-		res = mlaAddPart(res, date)
+		res = appendCitation(res, date)
 	}
 
 	/*
@@ -391,7 +393,7 @@ func (e *mlaEncoder) Contents() (string, error) {
 	   end
 	*/
 
-	res = mlaAddPart(res, e.data.pages)
+	res = appendCitation(res, e.data.pages)
 
 	/*
 	   # === URL/DOI
@@ -404,7 +406,7 @@ func (e *mlaEncoder) Contents() (string, error) {
 	   end
 	*/
 
-	res = mlaAddPart(res, e.data.link)
+	res = appendCitation(res, e.data.link)
 
 	/*
 	   # The end of the citation should be a period.
@@ -418,7 +420,7 @@ func (e *mlaEncoder) Contents() (string, error) {
 	return res, nil
 }
 
-func mlaCitationTitle(s string) string {
+func mlaTitle(s string) string {
 	/*
 	   # Format a title for use in an MLA citation.
 	   #
@@ -479,26 +481,4 @@ func mlaCitationTitle(s string) string {
 	}
 
 	return title
-}
-
-func mlaAddPart(str, part string) string {
-	res := str
-
-	if part == "" {
-		return res
-	}
-
-	if res != "" {
-		if strings.HasSuffix(res, " ") == false && strings.HasSuffix(res, ".") == false && strings.HasSuffix(res, ",") == false {
-			res += ","
-		}
-
-		if strings.HasSuffix(res, " ") == false {
-			res += " "
-		}
-	}
-
-	res += part
-
-	return res
 }

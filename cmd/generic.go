@@ -662,6 +662,28 @@ func monthName(m int) string {
 	return t.String()
 }
 
+func appendCitation(str, part string) string {
+	res := str
+
+	if part == "" {
+		return res
+	}
+
+	if res != "" {
+		if strings.HasSuffix(res, " ") == false && strings.HasSuffix(res, ".") == false && strings.HasSuffix(res, ",") == false {
+			res += ","
+		}
+
+		if strings.HasSuffix(res, " ") == false {
+			res += " "
+		}
+	}
+
+	res += part
+
+	return res
+}
+
 func init() {
 	re.volume = regexp.MustCompile(`(?i)^vol`)
 	re.issue = regexp.MustCompile(`(?i)^(n[ou]|iss)`)

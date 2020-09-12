@@ -1,7 +1,7 @@
 package main
 
 import (
-	"errors"
+	"fmt"
 	"strings"
 )
 
@@ -69,6 +69,8 @@ func (e *cmsEncoder) Contents() (string, error) {
 		return strings.Join(e.data.citeAs, "\n"), nil
 	}
 
+	res := ""
+
 	/*
 	   # === Author(s)
 	   # First author in "Last, First" form; second author in "First Last" form;
@@ -106,7 +108,56 @@ func (e *cmsEncoder) Contents() (string, error) {
 	     end
 	     result << '.'
 	   end
+	*/
 
+	pub := []string{e.data.publisher}
+	pubCompTrans := pub
+	pubCompTrans = append(pubCompTrans, e.data.compilers...)
+	pubCompTrans = append(pubCompTrans, e.data.translators...)
+
+	authors := removeEntries(e.data.authors, pubCompTrans)
+	editors := removeEntries(e.data.editors, pubCompTrans)
+	advisors := removeEntries(e.data.advisors, pubCompTrans)
+	compilers := removeEntries(e.data.compilers, pub)
+	translators := removeEntries(e.data.translators, pub)
+
+	var creators []string
+	creators = append(creators, authors...)
+	creators = append(creators, editors...)
+	creators = append(creators, advisors...)
+
+	numCreators := len(creators)
+	if numCreators > 0 {
+		res += cmsNames(creators)
+
+		nonEditors := removeEntries(creators, editors)
+		if len(nonEditors) == 0 {
+			editors = []string{}
+			res += ", ed"
+			if numCreators > 1 {
+				res += "s"
+			}
+		}
+
+		nonCompilers := removeEntries(creators, compilers)
+		if len(nonCompilers) == 0 {
+			compilers = []string{}
+			res += ", comp"
+			if numCreators > 1 {
+				res += "s"
+			}
+		}
+
+		nonTranslators := removeEntries(creators, translators)
+		if len(nonTranslators) == 0 {
+			translators = []string{}
+			res += ", trans"
+		}
+
+		res += "."
+	}
+
+	/*
 	   # === Item Title
 	   # Titles of larger works (books, journals, etc) are italicized; title of
 	   # shorter works (poems, articles, etc) are in quotes.  If the article
@@ -122,7 +173,23 @@ func (e *cmsEncoder) Contents() (string, error) {
 	       result << "<em>#{title}</em>."
 	     end
 	   end
+	*/
 
+	if e.data.title != "" {
+		if res != "" {
+			res += " "
+		}
+
+		title := mlaTitle(e.data.title)
+
+		if e.data.isArticle == true {
+			res += `"` + doubleToSingleQuotes(title) + `."`
+		} else {
+			res += "<em>" + title + "</em>."
+		}
+	}
+
+	/*
 	   # === Editors, Compilers, or Translators
 	   actors = { 'Edited' => eds, 'Compiled' => comps, 'Translated' => trans }
 	   actors.each_pair do |action, names|
@@ -130,14 +197,50 @@ func (e *cmsEncoder) Contents() (string, error) {
 	     result << SPACE unless result.blank? || result.end_with?(SPACE)
 	     result << action << ' by ' << cmos_names(names) << '.'
 	   end
+	*/
 
+	if len(editors) > 0 {
+		if res != "" && strings.HasSuffix(res, " ") == false {
+			res += " "
+		}
+
+		res += "Edited by " + cmsNames(editors) + "."
+	}
+
+	if len(compilers) > 0 {
+		if res != "" && strings.HasSuffix(res, " ") == false {
+			res += " "
+		}
+
+		res += "Compiled by " + cmsNames(compilers) + "."
+	}
+
+	if len(translators) > 0 {
+		if res != "" && strings.HasSuffix(res, " ") == false {
+			res += " "
+		}
+
+		res += "Translated by " + cmsNames(translators) + "."
+	}
+
+	/*
 	   # === Container Title
 	   if journal.present?
 	     result << SPACE unless result.blank? || result.end_with?(SPACE)
 	     journal = mla_citation_title(journal)
 	     result << "<em>#{journal}</em>"
 	   end
+	*/
 
+	if e.data.journal != "" {
+		if res != "" && strings.HasSuffix(res, " ") == false {
+			res += " "
+		}
+
+		res += "<em>" + mlaTitle(e.data.journal) + "</em>"
+	}
+
+	/*
 	   # === Version/Edition
 	   if edition.present?
 	     unless result.blank?
@@ -147,6 +250,11 @@ func (e *cmsEncoder) Contents() (string, error) {
 	     result << clean_end_punctuation(edition)
 	   end
 
+	*/
+
+	res = appendCitation(res, cleanEndPunctuation(e.data.edition))
+
+	/*
 	   # === Container Editors
 	   if editors.present?
 	     unless result.blank?
@@ -156,7 +264,11 @@ func (e *cmsEncoder) Contents() (string, error) {
 	     editors = cmos_names(editors)
 	     result << clean_end_punctuation(editors)
 	   end
+	*/
 
+	// NOTE: these are journal editors (as opposed to book editors); not yet implemented
+
+	/*
 	   # === Accession Number (for archival collections)
 	   if an.present?
 	     unless result.blank?
@@ -165,7 +277,11 @@ func (e *cmsEncoder) Contents() (string, error) {
 	     end
 	     result << an
 	   end
+	*/
 
+	// NOTE: archival items should all have a cite_as entry, obviating the need to handle accession number
+
+	/*
 	   # === Volume
 	   if volume.present?
 	     unless result.blank?
@@ -174,7 +290,11 @@ func (e *cmsEncoder) Contents() (string, error) {
 	     end
 	     result << volume
 	   end
+	*/
 
+	res = appendCitation(res, e.data.volume)
+
+	/*
 	   # === Issue
 	   if issue.present?
 	     unless result.blank?
@@ -183,7 +303,11 @@ func (e *cmsEncoder) Contents() (string, error) {
 	     end
 	     result << issue
 	   end
+	*/
 
+	res = appendCitation(res, e.data.issue)
+
+	/*
 	   # === Publisher
 	   if publisher.present?
 	     unless result.blank?
@@ -192,7 +316,11 @@ func (e *cmsEncoder) Contents() (string, error) {
 	     end
 	     result << publisher
 	   end
+	*/
 
+	res = appendCitation(res, e.data.publisher)
+
+	/*
 	   # === Date of publication
 	   # Should be "YYYY" for a book; "[Day] Mon. YYYY" for an article.
 	   if date.present?
@@ -212,7 +340,31 @@ func (e *cmsEncoder) Contents() (string, error) {
 	     end
 	     result << date
 	   end
+	*/
 
+	if e.data.date != "" {
+		date := ""
+
+		month := monthName(e.data.month)
+		if len(month) > 3 {
+			month = month[:3] + "."
+		}
+
+		switch {
+		case e.data.isArticle && e.data.year != 0 && month != "" && e.data.day != 0:
+			date = fmt.Sprintf("%d %s %d", e.data.day, month, e.data.year)
+
+		case e.data.isArticle && e.data.year != 0 && month != "":
+			date = fmt.Sprintf("%d, %s", e.data.year, month)
+
+		case e.data.year != 0:
+			date = fmt.Sprintf("%d", e.data.year)
+		}
+
+		res = appendCitation(res, date)
+	}
+
+	/*
 	   # === Pages
 	   if pages.present?
 	     unless result.blank?
@@ -222,7 +374,11 @@ func (e *cmsEncoder) Contents() (string, error) {
 	     end
 	     result << pages
 	   end
+	*/
 
+	res = appendCitation(res, e.data.pages)
+
+	/*
 	   # === URL/DOI
 	   if link.present?
 	     unless result.blank?
@@ -231,12 +387,92 @@ func (e *cmsEncoder) Contents() (string, error) {
 	     end
 	     result << link
 	   end
+	*/
 
+	res = appendCitation(res, e.data.link)
+
+	/*
 	   # The end of the citation should be a period.
 	   result << '.' unless result.end_with?('.')
 
 	   result
 	*/
 
-	return "", errors.New("non-explicit CMS citations not yet implemented")
+	if strings.HasSuffix(res, ".") == false {
+		res += "."
+	}
+
+	return res, nil
+}
+
+func cmsNames(authors []string) string {
+/*
+    # Format a list of names for Chicago Manual of Style citations.
+    #
+    # @param [Array<String>] names    One or more personal or corporate names.
+    # @param [Boolean]       authors  Treat as author names if *true*.
+    #
+    # @return [String]
+    #
+    # === Usage Notes
+    # For author citations use `cmos_names(src, true)` to emit the first listed
+    # name in bibliographic order (with the surname first).  Otherwise all
+    # names are emitted in reading order (with the surname last).
+    #
+    def cmos_names(names, authors = false)
+      total  = names.size
+      et_al  = (total > 10)
+      names  = et_al ? names.take(7) : names.dup
+      first  = names.shift
+      result = authors ? capitalize(first.dup) : name_reverse(first)
+      if names.present?
+        names.map! { |n| name_reverse(n) }
+        final = et_al ? 'et al' : "and #{names.pop}"
+        result << ', ' << names.join(', ') unless names.blank?
+        result << ' ' << final
+      end
+      clean_end_punctuation(result)
+    end
+*/
+	res := ""
+
+	total := len(authors)
+
+	etAl := total > 10
+
+	names := authors
+	if etAl == true {
+		names = names[:7]
+	}
+
+	var first string
+
+	first, names = names[0], names[1:]
+
+	res += capitalize(first)
+
+	if len(names) > 0 {
+		var readingNames []string
+		for _, name := range names {
+			readingNames = append(readingNames, readingOrder(name))
+		}
+
+		var last string
+
+		last, readingNames = readingNames[len(readingNames)-1], readingNames[:len(readingNames)-1]
+
+		if len(readingNames) > 0 {
+			res += ", " + strings.Join(readingNames, ", ")
+		}
+
+		if etAl == true {
+			res += " et al"
+		} else {
+			res += " and " + last
+		}
+	}
+
+	res = cleanEndPunctuation(res)
+
+	return res
 }
