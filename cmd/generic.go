@@ -720,7 +720,7 @@ func abbreviateName(name string) string {
 
 	res, parts = parts[0], parts[1:]
 
-	if re.year.MatchString(parts[len(parts)-1]) == true {
+	if len(parts) > 0 && re.year.MatchString(parts[len(parts)-1]) == true {
 		parts = parts[:len(parts)-1]
 	}
 
