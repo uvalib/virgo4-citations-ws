@@ -22,10 +22,13 @@ type citationREs struct {
 	doiPrefix          *regexp.Regexp
 	doiURL             *regexp.Regexp
 	urlProtocol        *regexp.Regexp
+	year               *regexp.Regexp
+	romanNumeral       *regexp.Regexp
 }
 
 var re citationREs
-var nameSuffixes map[string]bool
+var nameSuffixMap map[string]bool
+var lowerCaseWordMap map[string]bool
 
 // data common among CMS/APA/MLA citations
 type genericCitation struct {
@@ -233,7 +236,7 @@ func (c *genericCitation) setupIssue(issue string) {
 }
 
 func (c *genericCitation) setupPages(pages string) {
-	ends := strings.Split(re.pages.ReplaceAllString(pages, ""), "-")
+	ends := wordsBySeparator(re.pages.ReplaceAllString(pages, ""), "-")
 
 	pageRange := ""
 	prefix := ""
@@ -532,21 +535,12 @@ func readingOrder(name string) string {
 		return name
 	}
 
-	var commaParts []string
+	commaParts := wordsBySeparator(name, ",")
 	var suffixParts []string
 
 	var lastName string
 	var otherNames string
 	var suffixes string
-
-	for _, p := range strings.Split(name, ",") {
-		part := strings.TrimSpace(p)
-		if part == "" {
-			continue
-		}
-
-		commaParts = append(commaParts, part)
-	}
 
 	for {
 		if len(commaParts) == 0 {
@@ -555,7 +549,7 @@ func readingOrder(name string) string {
 
 		last := commaParts[len(commaParts)-1]
 
-		if nameSuffixes[strings.ToLower(last)] == false {
+		if nameSuffixMap[last] == false {
 			break
 		}
 
@@ -576,7 +570,7 @@ func readingOrder(name string) string {
 		otherNames = strings.Join(commaParts, ", ")
 
 	case len(commaParts) == 1:
-		nameParts := strings.Split(commaParts[0], " ")
+		nameParts := wordsBySeparator(commaParts[0], " ")
 
 		/*
 		   # Remove the elements from the end of *name_parts* which appear to be a
@@ -720,7 +714,49 @@ func abbreviateName(name string) string {
 		return name
 	}
 
-	return name
+	parts := wordsBySeparator(name, ",")
+
+	res := ""
+
+	res, parts = parts[0], parts[1:]
+
+	if re.year.MatchString(parts[len(parts)-1]) == true {
+		parts = parts[:len(parts)-1]
+	}
+
+	if len(parts) > 0 {
+		res += ", "
+
+		var resParts []string
+
+		for _, part := range parts {
+			var resPieces []string
+
+			for _, piece := range wordsBySeparator(part, " ") {
+				if lowerCaseWordMap[piece] == true {
+					continue
+				}
+
+				keep := strings.Contains(piece, ".")
+				keep = keep || re.romanNumeral.MatchString(piece)
+				keep = keep || nameSuffixMap[piece]
+
+				if keep == false {
+					piece = string(piece[0]) + "."
+				}
+
+				resPieces = append(resPieces, piece)
+			}
+
+			resParts = append(resParts, strings.Join(resPieces, " "))
+		}
+
+		res += strings.Join(resParts, ", ")
+	}
+
+	res = capitalize(res)
+
+	return res
 }
 
 func doubleToSingleQuotes(s string) string {
@@ -766,6 +802,21 @@ func appendUnlessEndsWith(str, part string, ends []string) string {
 	return res
 }
 
+func wordsBySeparator(word, separator string) []string {
+	var words []string
+
+	for _, p := range strings.Split(word, separator) {
+		part := strings.TrimSpace(p)
+		if part == "" {
+			continue
+		}
+
+		words = append(words, part)
+	}
+
+	return words
+}
+
 func init() {
 	re.volume = regexp.MustCompile(`(?i)^vol`)
 	re.issue = regexp.MustCompile(`(?i)^(n[ou]|iss)`)
@@ -780,10 +831,14 @@ func init() {
 	re.doiPrefix = regexp.MustCompile(`^doi:`)
 	re.doiURL = regexp.MustCompile(`^https?://(\w+\.)?doi\.org/`)
 	re.urlProtocol = regexp.MustCompile(`^\w+://`)
+	re.year = regexp.MustCompile(`\d{4}`)
+	re.romanNumeral = regexp.MustCompile(`(?i)^([IX][IVX]*|VI*)$`)
 
-	nameSuffixes = make(map[string]bool)
+	var list []string
 
-	suffixes := []string{
+	nameSuffixMap = make(map[string]bool)
+
+	list = []string{
 		"B.A.",
 		"BA",
 		"B.S.",
@@ -822,7 +877,55 @@ func init() {
 		"Sr",
 	}
 
-	for _, suffix := range suffixes {
-		nameSuffixes[strings.ToLower(suffix)] = true
+	for _, s := range list {
+		nameSuffixMap[s] = true
+	}
+
+	lowerCaseWordMap := make(map[string]bool)
+
+	list = []string{
+		"van der",
+		"van den",
+		"and",
+		"ca.",
+		"del",
+		"des",
+		"etc",
+		"for",
+		"les",
+		"los",
+		"nor",
+		"pp.",
+		"the",
+		"und",
+		"van",
+		"von",
+		"vs.",
+		"an",
+		"as",
+		"at",
+		"by",
+		"de",
+		"di",
+		"du",
+		"el",
+		"et",
+		"in",
+		"la",
+		"le",
+		"of",
+		"on",
+		"or",
+		"to",
+		"v.",
+		"a",
+		"à",
+		"e",
+		"o",
+		"y",
+	}
+
+	for _, s := range list {
+		lowerCaseWordMap[s] = true
 	}
 }

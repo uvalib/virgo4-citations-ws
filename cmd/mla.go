@@ -427,7 +427,7 @@ func mlaTitle(s string) string {
 
 	noCapitalize := []string{"a", "an", "and", "but", "by", "for", "it", "of", "the", "to", "with"}
 
-	oldWords := strings.Split(strings.TrimSpace(s), " ")
+	oldWords := wordsBySeparator(s, " ")
 	var newWords []string
 
 	for _, word := range oldWords {
