@@ -233,15 +233,29 @@ func (c *genericCitation) setupIssue(issue string) {
 }
 
 func (c *genericCitation) setupPages(pages string) {
-	fullPages := re.pages.ReplaceAllString(pages, "")
+	ends := strings.Split(re.pages.ReplaceAllString(pages, ""), "-")
 
-	if fullPages != "" && c.opts.pagesPrefix == true {
-		prefix := "p."
-		if strings.Contains(fullPages, "-") {
-			prefix = "pp."
+	pageRange := ""
+	prefix := ""
+
+	switch {
+	case len(ends) == 2:
+		prefix = "pp."
+		pageRange = strings.TrimSpace(ends[0]) + " - " + strings.TrimSpace(ends[1])
+
+	case len(ends) == 1:
+		prefix = "p."
+		pageRange = strings.TrimSpace(ends[0])
+	}
+
+	fullPages := ""
+
+	if pageRange != "" {
+		if c.opts.pagesPrefix == true {
+			fullPages = prefix + " " + pageRange
+		} else {
+			fullPages = pageRange
 		}
-
-		fullPages = prefix + " " + fullPages
 	}
 
 	c.pages = fullPages
@@ -541,7 +555,7 @@ func readingOrder(name string) string {
 
 		last := commaParts[len(commaParts)-1]
 
-		if nameSuffixes[last] == false {
+		if nameSuffixes[strings.ToLower(last)] == false {
 			break
 		}
 
@@ -723,24 +737,31 @@ func monthName(m int) string {
 	return t.String()
 }
 
-func appendCitation(str, part string) string {
-	res := str
-
+func appendWithComma(str, part string) string {
 	if part == "" {
-		return res
+		return str
 	}
 
-	if res != "" {
-		if strings.HasSuffix(res, " ") == false && strings.HasSuffix(res, ".") == false && strings.HasSuffix(res, ",") == false {
-			res += ","
-		}
-
-		if strings.HasSuffix(res, " ") == false {
-			res += " "
-		}
-	}
-
+	res := str
+	res = appendUnlessEndsWith(res, ",", []string{" ", ".", ","})
+	res = appendUnlessEndsWith(res, " ", []string{" "})
 	res += part
+
+	return res
+}
+
+func appendUnlessEndsWith(str, part string, ends []string) string {
+	if str == "" {
+		return str
+	}
+
+	for _, end := range ends {
+		if strings.HasSuffix(str, end) == true {
+			return str
+		}
+	}
+
+	res := str + part
 
 	return res
 }
@@ -802,6 +823,6 @@ func init() {
 	}
 
 	for _, suffix := range suffixes {
-		nameSuffixes[suffix] = true
+		nameSuffixes[strings.ToLower(suffix)] = true
 	}
 }

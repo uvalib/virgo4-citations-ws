@@ -159,30 +159,11 @@ func (e *apaEncoder) Contents() (string, error) {
 	*/
 
 	if e.data.date != "" {
-		if res != "" && strings.HasSuffix(res, " ") == false {
-			res += " "
-		}
+		res = appendUnlessEndsWith(res, " ", []string{" "})
 
-		date := ""
-
-		month := monthName(e.data.month)
-
-		switch {
-		case e.data.isArticle && e.data.year != 0 && month != "" && e.data.day != 0:
-			date = fmt.Sprintf("%d, %s %d", e.data.year, month, e.data.day)
-
-		case e.data.isArticle && e.data.year != 0 && month != "":
-			date = fmt.Sprintf("%d, %s", e.data.year, month)
-
-		case e.data.year != 0:
-			date = fmt.Sprintf("%d", e.data.year)
-		}
-
-		res += "(" + date + ")."
+		res += "(" + apaDate(e.data.year, e.data.month, e.data.day, e.data.isArticle) + ")."
 	} else {
-		if res != "" && strings.HasSuffix(res, ".") == false {
-			res += "."
-		}
+		res = appendUnlessEndsWith(res, ".", []string{"."})
 	}
 
 	/*
@@ -198,9 +179,7 @@ func (e *apaEncoder) Contents() (string, error) {
 	*/
 
 	if e.data.title != "" {
-		if res != "" && strings.HasSuffix(res, " ") == false {
-			res += " "
-		}
+		res = appendUnlessEndsWith(res, " ", []string{" "})
 
 		title := cleanEndPunctuation(e.data.title)
 
@@ -246,12 +225,8 @@ func (e *apaEncoder) Contents() (string, error) {
 	*/
 
 	if e.data.journal != "" {
-		if res != "" && strings.HasSuffix(res, " ") == false && strings.HasSuffix(res, ".") == false && strings.HasSuffix(res, ",") == false {
-			res += "."
-		}
-		if res != "" && strings.HasSuffix(res, " ") == false {
-			res += " "
-		}
+		res = appendUnlessEndsWith(res, ".", []string{" ", ".", ","})
+		res = appendUnlessEndsWith(res, " ", []string{" "})
 
 		res += "<em>" + mlaTitle(e.data.journal) + "</em>"
 	}
@@ -268,15 +243,11 @@ func (e *apaEncoder) Contents() (string, error) {
 	*/
 
 	if e.data.edition != "" {
-		if res != "" && strings.HasSuffix(res, " ") == false {
-			res += " "
-		}
+		res = appendUnlessEndsWith(res, " ", []string{" "})
 
 		res += "(" + cleanEndPunctuation(e.data.edition) + ")."
 	} else if e.data.journal == "" {
-		if res != "" && strings.HasSuffix(res, ".") == false {
-			res += "."
-		}
+		res = appendUnlessEndsWith(res, ".", []string{"."})
 	}
 
 	/*
@@ -291,12 +262,8 @@ func (e *apaEncoder) Contents() (string, error) {
 	*/
 
 	if e.data.volume != "" {
-		if res != "" && strings.HasSuffix(res, " ") == false && strings.HasSuffix(res, ".") == false && strings.HasSuffix(res, ",") == false {
-			res += ","
-		}
-		if res != "" && strings.HasSuffix(res, " ") == false {
-			res += " "
-		}
+		res = appendUnlessEndsWith(res, ",", []string{" ", ".", ","})
+		res = appendUnlessEndsWith(res, " ", []string{" "})
 
 		res += cleanEndPunctuation(e.data.volume)
 	}
@@ -314,9 +281,7 @@ func (e *apaEncoder) Contents() (string, error) {
 
 	if e.data.issue != "" {
 		if e.data.volume == "" {
-			if res != "" && strings.HasSuffix(res, " ") == false {
-				res += " "
-			}
+			res = appendUnlessEndsWith(res, " ", []string{" "})
 		}
 
 		res += "(" + cleanEndPunctuation(e.data.issue) + ")"
@@ -336,12 +301,8 @@ func (e *apaEncoder) Contents() (string, error) {
 	*/
 
 	if e.data.pages != "" {
-		if res != "" && strings.HasSuffix(res, " ") == false && strings.HasSuffix(res, ".") == false && strings.HasSuffix(res, ",") == false {
-			res += ","
-		}
-		if res != "" && strings.HasSuffix(res, " ") == false {
-			res += " "
-		}
+		res = appendUnlessEndsWith(res, ",", []string{" ", ".", ","})
+		res = appendUnlessEndsWith(res, " ", []string{" "})
 
 		res += e.data.pages
 	}
@@ -372,12 +333,8 @@ func (e *apaEncoder) Contents() (string, error) {
 	*/
 
 	if e.data.publisher != "" {
-		if res != "" && strings.HasSuffix(res, " ") == false && strings.HasSuffix(res, ".") == false && strings.HasSuffix(res, ",") == false {
-			res += ","
-		}
-		if res != "" && strings.HasSuffix(res, " ") == false {
-			res += " "
-		}
+		res = appendUnlessEndsWith(res, ",", []string{" ", ".", ","})
+		res = appendUnlessEndsWith(res, " ", []string{" "})
 
 		res += e.data.publisher + "."
 	}
@@ -387,9 +344,7 @@ func (e *apaEncoder) Contents() (string, error) {
 	   result << '.' unless result.blank? || result.end_with?('.')
 	*/
 
-	if res != "" && strings.HasSuffix(res, ".") == false {
-		res += "."
-	}
+	res = appendUnlessEndsWith(res, ".", []string{"."})
 
 	/*
 	   # === URL/DOI
@@ -403,12 +358,29 @@ func (e *apaEncoder) Contents() (string, error) {
 	*/
 
 	if e.data.link != "" {
-		if res != "" && strings.HasSuffix(res, " ") == false {
-			res += " "
-		}
+		res = appendUnlessEndsWith(res, " ", []string{" "})
 
 		res += "Retrieved from " + e.data.link
 	}
 
 	return res, nil
+}
+
+func apaDate(d, m, y int, isArticle bool) string {
+	res := ""
+
+	month := monthName(m)
+
+	switch {
+	case isArticle == true && y != 0 && month != "" && d != 0:
+		res = fmt.Sprintf("%d, %s %d", y, month, d)
+
+	case isArticle == true && y != 0 && month != "":
+		res = fmt.Sprintf("%d, %s", y, month)
+
+	case y != 0:
+		res = fmt.Sprintf("%d", y)
+	}
+
+	return res
 }

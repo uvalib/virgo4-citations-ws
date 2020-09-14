@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	"strings"
 )
 
@@ -176,9 +175,7 @@ func (e *cmsEncoder) Contents() (string, error) {
 	*/
 
 	if e.data.title != "" {
-		if res != "" {
-			res += " "
-		}
+		res = appendUnlessEndsWith(res, " ", []string{" "})
 
 		title := mlaTitle(e.data.title)
 
@@ -200,26 +197,17 @@ func (e *cmsEncoder) Contents() (string, error) {
 	*/
 
 	if len(editors) > 0 {
-		if res != "" && strings.HasSuffix(res, " ") == false {
-			res += " "
-		}
-
+		res = appendUnlessEndsWith(res, " ", []string{" "})
 		res += "Edited by " + cmsNames(editors) + "."
 	}
 
 	if len(compilers) > 0 {
-		if res != "" && strings.HasSuffix(res, " ") == false {
-			res += " "
-		}
-
+		res = appendUnlessEndsWith(res, " ", []string{" "})
 		res += "Compiled by " + cmsNames(compilers) + "."
 	}
 
 	if len(translators) > 0 {
-		if res != "" && strings.HasSuffix(res, " ") == false {
-			res += " "
-		}
-
+		res = appendUnlessEndsWith(res, " ", []string{" "})
 		res += "Translated by " + cmsNames(translators) + "."
 	}
 
@@ -233,10 +221,7 @@ func (e *cmsEncoder) Contents() (string, error) {
 	*/
 
 	if e.data.journal != "" {
-		if res != "" && strings.HasSuffix(res, " ") == false {
-			res += " "
-		}
-
+		res = appendUnlessEndsWith(res, " ", []string{" "})
 		res += "<em>" + mlaTitle(e.data.journal) + "</em>"
 	}
 
@@ -252,7 +237,7 @@ func (e *cmsEncoder) Contents() (string, error) {
 
 	*/
 
-	res = appendCitation(res, cleanEndPunctuation(e.data.edition))
+	res = appendWithComma(res, cleanEndPunctuation(e.data.edition))
 
 	/*
 	   # === Container Editors
@@ -292,7 +277,7 @@ func (e *cmsEncoder) Contents() (string, error) {
 	   end
 	*/
 
-	res = appendCitation(res, e.data.volume)
+	res = appendWithComma(res, e.data.volume)
 
 	/*
 	   # === Issue
@@ -305,7 +290,7 @@ func (e *cmsEncoder) Contents() (string, error) {
 	   end
 	*/
 
-	res = appendCitation(res, e.data.issue)
+	res = appendWithComma(res, e.data.issue)
 
 	/*
 	   # === Publisher
@@ -318,7 +303,7 @@ func (e *cmsEncoder) Contents() (string, error) {
 	   end
 	*/
 
-	res = appendCitation(res, e.data.publisher)
+	res = appendWithComma(res, e.data.publisher)
 
 	/*
 	   # === Date of publication
@@ -343,25 +328,7 @@ func (e *cmsEncoder) Contents() (string, error) {
 	*/
 
 	if e.data.date != "" {
-		date := ""
-
-		month := monthName(e.data.month)
-		if len(month) > 3 {
-			month = month[:3] + "."
-		}
-
-		switch {
-		case e.data.isArticle && e.data.year != 0 && month != "" && e.data.day != 0:
-			date = fmt.Sprintf("%d %s %d", e.data.day, month, e.data.year)
-
-		case e.data.isArticle && e.data.year != 0 && month != "":
-			date = fmt.Sprintf("%d, %s", e.data.year, month)
-
-		case e.data.year != 0:
-			date = fmt.Sprintf("%d", e.data.year)
-		}
-
-		res = appendCitation(res, date)
+		res = appendWithComma(res, mlaDate(e.data.year, e.data.month, e.data.day, e.data.isArticle))
 	}
 
 	/*
@@ -376,7 +343,7 @@ func (e *cmsEncoder) Contents() (string, error) {
 	   end
 	*/
 
-	res = appendCitation(res, e.data.pages)
+	res = appendWithComma(res, e.data.pages)
 
 	/*
 	   # === URL/DOI
@@ -389,7 +356,7 @@ func (e *cmsEncoder) Contents() (string, error) {
 	   end
 	*/
 
-	res = appendCitation(res, e.data.link)
+	res = appendWithComma(res, e.data.link)
 
 	/*
 	   # The end of the citation should be a period.
@@ -398,9 +365,7 @@ func (e *cmsEncoder) Contents() (string, error) {
 	   result
 	*/
 
-	if strings.HasSuffix(res, ".") == false {
-		res += "."
-	}
+	res = appendUnlessEndsWith(res, ".", []string{"."})
 
 	return res, nil
 }

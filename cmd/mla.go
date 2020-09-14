@@ -183,9 +183,7 @@ func (e *mlaEncoder) Contents() (string, error) {
 	*/
 
 	if e.data.journal != "" {
-		if res != "" && strings.HasSuffix(res, " ") == false {
-			res += " "
-		}
+		res = appendUnlessEndsWith(res, " ", []string{" "})
 
 		res += "<em>" + mlaTitle(e.data.journal) + "</em>"
 	}
@@ -201,7 +199,7 @@ func (e *mlaEncoder) Contents() (string, error) {
 	   end
 	*/
 
-	res = appendCitation(res, cleanEndPunctuation(e.data.edition))
+	res = appendWithComma(res, cleanEndPunctuation(e.data.edition))
 
 	/*
 	   # === Container Editors
@@ -247,7 +245,7 @@ func (e *mlaEncoder) Contents() (string, error) {
 	   end
 	*/
 
-	res = appendCitation(res, e.data.publisher)
+	res = appendWithComma(res, e.data.publisher)
 
 	/*
 	   # === Volume
@@ -260,7 +258,7 @@ func (e *mlaEncoder) Contents() (string, error) {
 	   end
 	*/
 
-	res = appendCitation(res, e.data.volume)
+	res = appendWithComma(res, e.data.volume)
 
 	/*
 	   # === Issue
@@ -273,7 +271,7 @@ func (e *mlaEncoder) Contents() (string, error) {
 	   end
 	*/
 
-	res = appendCitation(res, e.data.issue)
+	res = appendWithComma(res, e.data.issue)
 
 	/*
 			   # === Date of publication
@@ -361,25 +359,7 @@ func (e *mlaEncoder) Contents() (string, error) {
 	*/
 
 	if e.data.date != "" {
-		date := ""
-
-		month := monthName(e.data.month)
-		if len(month) > 3 {
-			month = month[:3] + "."
-		}
-
-		switch {
-		case e.data.isArticle && e.data.year != 0 && month != "" && e.data.day != 0:
-			date = fmt.Sprintf("%d %s %d", e.data.day, month, e.data.year)
-
-		case e.data.isArticle && e.data.year != 0 && month != "":
-			date = fmt.Sprintf("%d, %s", e.data.year, month)
-
-		case e.data.year != 0:
-			date = fmt.Sprintf("%d", e.data.year)
-		}
-
-		res = appendCitation(res, date)
+		res = appendWithComma(res, mlaDate(e.data.year, e.data.month, e.data.day, e.data.isArticle))
 	}
 
 	/*
@@ -393,7 +373,7 @@ func (e *mlaEncoder) Contents() (string, error) {
 	   end
 	*/
 
-	res = appendCitation(res, e.data.pages)
+	res = appendWithComma(res, e.data.pages)
 
 	/*
 	   # === URL/DOI
@@ -406,16 +386,14 @@ func (e *mlaEncoder) Contents() (string, error) {
 	   end
 	*/
 
-	res = appendCitation(res, e.data.link)
+	res = appendWithComma(res, e.data.link)
 
 	/*
 	   # The end of the citation should be a period.
 	   result << '.' unless result.end_with?('.')
 	*/
 
-	if strings.HasSuffix(res, ".") == false {
-		res += "."
-	}
+	res = appendUnlessEndsWith(res, ".", []string{"."})
 
 	return res, nil
 }
@@ -446,26 +424,16 @@ func mlaTitle(s string) string {
 	     }.join(SPACE).sub(/(?<!\.\.)\.$/, '')
 	   end
 	*/
-	noCapitalize := []string{
-		"a",
-		"an",
-		"and",
-		"but",
-		"by",
-		"for",
-		"it",
-		"of",
-		"the",
-		"to",
-		"with",
-	}
+
+	noCapitalize := []string{"a", "an", "and", "but", "by", "for", "it", "of", "the", "to", "with"}
 
 	oldWords := strings.Split(strings.TrimSpace(s), " ")
 	var newWords []string
 
 	for _, word := range oldWords {
-		if sliceContainsString(noCapitalize, word) == true {
-			newWords = append(newWords, word)
+		lower := strings.ToLower(strings.TrimSpace(word))
+		if sliceContainsString(noCapitalize, lower) == true {
+			newWords = append(newWords, lower)
 		} else {
 			newWords = append(newWords, capitalize(word))
 		}
@@ -481,4 +449,26 @@ func mlaTitle(s string) string {
 	}
 
 	return title
+}
+
+func mlaDate(d, m, y int, isArticle bool) string {
+	res := ""
+
+	month := monthName(m)
+	if len(month) > 3 {
+		month = month[:3] + "."
+	}
+
+	switch {
+	case isArticle == true && y != 0 && month != "" && d != 0:
+		res = fmt.Sprintf("%d %s %d", d, month, y)
+
+	case isArticle == true && y != 0 && month != "":
+		res = fmt.Sprintf("%d, %s", y, month)
+
+	case y != 0:
+		res = fmt.Sprintf("%d", y)
+	}
+
+	return res
 }

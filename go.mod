@@ -9,6 +9,7 @@ require (
 	github.com/microcosm-cc/bluemonday v1.0.4
 	github.com/prometheus/client_golang v1.7.1
 	github.com/prometheus/common v0.13.0 // indirect
+	github.com/ugorji/go v1.1.8 // indirect
 	github.com/uvalib/virgo4-api v0.0.0-20200810195030-c2e6838e3fd0
 	github.com/uvalib/virgo4-jwt v0.0.0-20200812155832-7443daa580fd
 	github.com/zsais/go-gin-prometheus v0.1.0
