@@ -659,8 +659,6 @@ func readingOrder(name string) string {
 }
 
 func abbreviateName(name string) string {
-	// TODO: implement me
-
 	/*
 	   # Transforms the form "last_name[, first_name [middle_names][, suffix]"
 	   # into the form "last_name[, initials][, suffix]".
@@ -735,7 +733,7 @@ func abbreviateName(name string) string {
 			var resPieces []string
 
 			for _, piece := range wordsBySeparator(part, " ") {
-				if lowerCaseWordMap[piece] == true {
+				if lowerCaseWordMap[strings.ToLower(piece)] == true {
 					continue
 				}
 
@@ -883,7 +881,7 @@ func init() {
 		nameSuffixMap[s] = true
 	}
 
-	lowerCaseWordMap := make(map[string]bool)
+	lowerCaseWordMap = make(map[string]bool)
 
 	list = []string{
 		"van der",
