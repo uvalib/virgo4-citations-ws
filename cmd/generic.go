@@ -620,14 +620,14 @@ func readingOrder(name string) string {
 					break
 				}
 
-				var lastPart string
-				lastPart, nameParts = nameParts[len(nameParts)-1], nameParts[:len(nameParts)-1]
+				lastPart := nameParts[len(nameParts)-1]
 
 				if re.lowerLastNamePart.MatchString(lastPart) == true {
 					break
 				}
 
 				lastParts = append([]string{lastPart}, lastParts...)
+				nameParts = nameParts[:len(nameParts)-1]
 			}
 
 			for {
@@ -642,6 +642,7 @@ func readingOrder(name string) string {
 				}
 
 				lastParts = append([]string{lastPart}, lastParts...)
+				nameParts = nameParts[:len(nameParts)-1]
 			}
 
 			lastName = strings.Join(lastParts, " ")
