@@ -620,7 +620,8 @@ func readingOrder(name string) string {
 					break
 				}
 
-				lastPart := nameParts[len(nameParts)-1]
+				var lastPart string
+				lastPart, nameParts = nameParts[len(nameParts)-1], nameParts[:len(nameParts)-1]
 
 				if re.lowerLastNamePart.MatchString(lastPart) == true {
 					break
