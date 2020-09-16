@@ -431,9 +431,8 @@ func mlaTitle(s string) string {
 	var newWords []string
 
 	for _, word := range oldWords {
-		lower := strings.ToLower(word)
-		if sliceContainsString(noCapitalize, lower) == true {
-			newWords = append(newWords, lower)
+		if sliceContainsString(noCapitalize, strings.ToLower(word)) == true {
+			newWords = append(newWords, word)
 		} else {
 			newWords = append(newWords, capitalize(word))
 		}
