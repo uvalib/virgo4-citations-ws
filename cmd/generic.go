@@ -138,7 +138,7 @@ func newGenericCitation(v4url string, parts citationParts, opts genericCitationO
 	c.setupDate(date)
 	c.setupLink(url, doi, isOnlineOnly, isVirgoURL, serialNumbers)
 
-	c.log()
+	//c.log()
 
 	return &c, nil
 }
