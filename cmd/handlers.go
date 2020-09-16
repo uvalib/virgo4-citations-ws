@@ -8,7 +8,7 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-func (p *serviceContext) citationHandler(c *gin.Context, citations []citationType) {
+func (p *serviceContext) citationHandler(c *gin.Context, json bool, citations []citationType) {
 	cl := clientContext{}
 	cl.init(p, c)
 
@@ -24,8 +24,8 @@ func (p *serviceContext) citationHandler(c *gin.Context, citations []citationTyp
 		return
 	}
 
-	// single citation uses configured values
-	if len(citations) == 1 {
+	// single non-json citation uses configured values
+	if json == false && len(citations) == 1 {
 		s.serveSingleCitation(citations[0])
 		return
 	}
@@ -34,7 +34,7 @@ func (p *serviceContext) citationHandler(c *gin.Context, citations []citationTyp
 }
 
 func (p *serviceContext) allHandler(c *gin.Context) {
-	p.citationHandler(c, []citationType{
+	p.citationHandler(c, true, []citationType{
 		newMlaEncoder(p.config.Formats.MLA, true),
 		newApaEncoder(p.config.Formats.APA, true),
 		newCmsEncoder(p.config.Formats.CMS, true),
@@ -42,23 +42,23 @@ func (p *serviceContext) allHandler(c *gin.Context) {
 }
 
 func (p *serviceContext) apaHandler(c *gin.Context) {
-	p.citationHandler(c, []citationType{newApaEncoder(p.config.Formats.APA, true)})
+	p.citationHandler(c, true, []citationType{newApaEncoder(p.config.Formats.APA, true)})
 }
 
 func (p *serviceContext) citeAsHandler(c *gin.Context) {
-	p.citationHandler(c, []citationType{newCiteAsEncoder(p.config.Formats.CiteAs)})
+	p.citationHandler(c, true, []citationType{newCiteAsEncoder(p.config.Formats.CiteAs)})
 }
 
 func (p *serviceContext) cmsHandler(c *gin.Context) {
-	p.citationHandler(c, []citationType{newCmsEncoder(p.config.Formats.CMS, true)})
+	p.citationHandler(c, true, []citationType{newCmsEncoder(p.config.Formats.CMS, true)})
 }
 
 func (p *serviceContext) mlaHandler(c *gin.Context) {
-	p.citationHandler(c, []citationType{newMlaEncoder(p.config.Formats.MLA, true)})
+	p.citationHandler(c, true, []citationType{newMlaEncoder(p.config.Formats.MLA, true)})
 }
 
 func (p *serviceContext) risHandler(c *gin.Context) {
-	p.citationHandler(c, []citationType{newRisEncoder(p.config.Formats.RIS)})
+	p.citationHandler(c, false, []citationType{newRisEncoder(p.config.Formats.RIS)})
 }
 
 func (p *serviceContext) unapiHandler(c *gin.Context) {
@@ -86,7 +86,7 @@ func (p *serviceContext) unapiHandler(c *gin.Context) {
 	}
 
 	// id and format params: the citation itself
-	p.citationHandler(c, []citationType{newRisEncoder(p.config.Formats.RIS)})
+	p.citationHandler(c, false, []citationType{newRisEncoder(p.config.Formats.RIS)})
 }
 
 func (p *serviceContext) ignoreHandler(c *gin.Context) {
