@@ -451,7 +451,7 @@ func mlaTitle(s string) string {
 	return title
 }
 
-func mlaDate(d, m, y int, isArticle bool) string {
+func mlaDate(y, m, d int, isArticle bool) string {
 	res := ""
 
 	month := monthName(m)

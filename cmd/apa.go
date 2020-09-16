@@ -366,7 +366,7 @@ func (e *apaEncoder) Contents() (string, error) {
 	return res, nil
 }
 
-func apaDate(d, m, y int, isArticle bool) string {
+func apaDate(y, m, d int, isArticle bool) string {
 	res := ""
 
 	month := monthName(m)
