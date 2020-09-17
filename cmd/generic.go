@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"log"
 	"regexp"
+	"strconv"
 	"strings"
 	"time"
 )
@@ -24,6 +25,8 @@ type citationREs struct {
 	urlProtocol        *regexp.Regexp
 	year               *regexp.Regexp
 	romanNumeral       *regexp.Regexp
+	leadingYear        *regexp.Regexp
+	trailingYear       *regexp.Regexp
 }
 
 var re citationREs
@@ -335,6 +338,30 @@ func (c *genericCitation) setupDate(date string) {
 		c.month = int(t.Month())
 		c.day = t.Day()
 		return
+	}
+
+	// fallback: attempt to extract leading/trailing year
+
+	if re.leadingYear.MatchString(date) == true {
+		if groups := re.leadingYear.FindStringSubmatch(date); len(groups) > 0 {
+			yearStr := groups[1]
+			if year, err := strconv.Atoi(yearStr); err == nil {
+				c.date = yearStr
+				c.year = year
+				return
+			}
+		}
+	}
+
+	if re.trailingYear.MatchString(date) == true {
+		if groups := re.trailingYear.FindStringSubmatch(date); len(groups) > 0 {
+			yearStr := groups[1]
+			if year, err := strconv.Atoi(yearStr); err == nil {
+				c.date = yearStr
+				c.year = year
+				return
+			}
+		}
 	}
 }
 
@@ -833,6 +860,8 @@ func init() {
 	re.urlProtocol = regexp.MustCompile(`^\w+://`)
 	re.year = regexp.MustCompile(`\d{4}`)
 	re.romanNumeral = regexp.MustCompile(`(?i)^([IX][IVX]*|VI*)$`)
+	re.leadingYear = regexp.MustCompile(`^\s*(\d{1,4}).*?$`)
+	re.trailingYear = regexp.MustCompile(`^.*?(\d{1,4})\s*$`)
 
 	var list []string
 

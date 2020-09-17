@@ -1,6 +1,7 @@
 package main
 
 import (
+	"log"
 	"net/http"
 	"path"
 )
@@ -78,7 +79,17 @@ func (s *citationsContext) collectCitationParts() serviceResponse {
 
 	s.initialized = true
 
+	//s.logCitationParts()
+
 	return serviceResponse{status: http.StatusOK}
+}
+
+func (s *citationsContext) logCitationParts() {
+	log.Printf("citation parts:")
+
+	for k, v := range s.parts {
+		log.Printf("    %s : %v", k, v)
+	}
 }
 
 func (s *citationsContext) handleCitationRequest(fmts []citationType) serviceResponse {
