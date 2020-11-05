@@ -307,7 +307,7 @@ func (c *genericCitation) setupPublisher(publisher, publishedPlace string) {
 			case strings.Contains(place, name):
 				fullPublisher = place
 			default:
-				fullPublisher = name + ": " + place
+				fullPublisher = place + ": " + name
 			}
 		}
 	}
