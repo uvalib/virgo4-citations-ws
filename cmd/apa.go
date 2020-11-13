@@ -102,31 +102,40 @@ func (e *apaEncoder) Contents() (string, error) {
 	   end
 	*/
 
-	if len(e.data.authors) > 0 {
-		var authors []string
-		for _, author := range e.data.authors {
-			// FIXME
-			authors = append(authors, abbreviateName(author))
+	authors := e.data.authors
+	editors := e.data.editors
+	advisors := e.data.advisors
+
+	var creators []string
+	creators = append(creators, authors...)
+	creators = append(creators, editors...)
+	creators = append(creators, advisors...)
+
+	numCreators := len(creators)
+	if numCreators > 0 {
+		var abbrCreators []string
+		for _, creator := range creators {
+			abbrCreators = append(abbrCreators, abbreviateName(creator))
 		}
 
 		var last string
 
-		total := len(authors)
+		total := numCreators
 
-		last, authors = authors[len(authors)-1], authors[:len(authors)-1]
+		last, abbrCreators = abbrCreators[len(abbrCreators)-1], abbrCreators[:len(abbrCreators)-1]
 
 		switch {
 		case total == 1:
 			res += last
 
 		case (total >= 2) && (total <= 7):
-			res += strings.Join(authors, ", ") + ", &amp; " + last
+			res += strings.Join(abbrCreators, ", ") + ", &amp; " + last
 
 		default:
-			res += strings.Join(authors[0:6], ", ") + ", ... " + last
+			res += strings.Join(abbrCreators[0:6], ", ") + ", ... " + last
 		}
 
-		nonEditors := removeEntries(e.data.authors, e.data.editors)
+		nonEditors := removeEntries(creators, e.data.editors)
 
 		if len(nonEditors) == 0 {
 			s := ""
@@ -134,7 +143,7 @@ func (e *apaEncoder) Contents() (string, error) {
 				s = "s"
 			}
 
-			res += "(Ed" + s + ".)."
+			res += " (Ed" + s + ".)"
 		}
 	}
 
