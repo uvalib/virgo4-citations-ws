@@ -182,7 +182,7 @@ func (e *cmsEncoder) Contents() (string, error) {
 		if e.data.isArticle == true {
 			res += `"` + doubleToSingleQuotes(title) + `."`
 		} else {
-			res += "<em>" + title + "</em>."
+			res += italics(title) + "."
 		}
 	}
 
@@ -222,7 +222,7 @@ func (e *cmsEncoder) Contents() (string, error) {
 
 	if e.data.journal != "" {
 		res = appendUnlessEndsWith(res, " ", []string{" "})
-		res += "<em>" + mlaTitle(e.data.journal) + "</em>"
+		res += italics(mlaTitle(e.data.journal))
 	}
 
 	/*

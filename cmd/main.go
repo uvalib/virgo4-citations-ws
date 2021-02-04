@@ -52,6 +52,7 @@ func main() {
 		format.GET("/citeas", svc.citeAsHandler)
 		format.GET("/cms", svc.cmsHandler)
 		format.GET("/mla", svc.mlaHandler)
+		format.GET("/lbb", svc.lbbHandler)
 		format.GET("/ris", svc.risHandler)
 	}
 

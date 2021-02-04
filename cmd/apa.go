@@ -195,7 +195,7 @@ func (e *apaEncoder) Contents() (string, error) {
 		if e.data.isArticle == true {
 			res += title
 		} else {
-			res += "<em>" + title + "</em>"
+			res += italics(title)
 		}
 	}
 
@@ -237,7 +237,7 @@ func (e *apaEncoder) Contents() (string, error) {
 		res = appendUnlessEndsWith(res, ".", []string{" ", ".", ","})
 		res = appendUnlessEndsWith(res, " ", []string{" "})
 
-		res += "<em>" + mlaTitle(e.data.journal) + "</em>"
+		res += italics(mlaTitle(e.data.journal))
 	}
 
 	/*

@@ -38,6 +38,7 @@ func (p *serviceContext) allHandler(c *gin.Context) {
 		newMlaEncoder(p.config.Formats.MLA, true),
 		newApaEncoder(p.config.Formats.APA, true),
 		newCmsEncoder(p.config.Formats.CMS, true),
+		newLbbEncoder(p.config.Formats.LBB, true),
 	})
 }
 
@@ -51,6 +52,10 @@ func (p *serviceContext) citeAsHandler(c *gin.Context) {
 
 func (p *serviceContext) cmsHandler(c *gin.Context) {
 	p.citationHandler(c, true, []citationType{newCmsEncoder(p.config.Formats.CMS, true)})
+}
+
+func (p *serviceContext) lbbHandler(c *gin.Context) {
+	p.citationHandler(c, true, []citationType{newLbbEncoder(p.config.Formats.LBB, true)})
 }
 
 func (p *serviceContext) mlaHandler(c *gin.Context) {

@@ -17,6 +17,7 @@ type citationREs struct {
 	editionCorrect     *regexp.Regexp
 	editionCorrectable *regexp.Regexp
 	fieldEnd           *regexp.Regexp
+	trailingPeriods    *regexp.Regexp
 	capitalizeable     *regexp.Regexp
 	doubleQuoted       *regexp.Regexp
 	lowerLastNamePart  *regexp.Regexp
@@ -45,10 +46,13 @@ type genericCitation struct {
 	compilers   []string
 	translators []string
 	title       string
+	format      string
 	journal     string
 	volume      string
 	issue       string
 	pages       string
+	pageFrom    string
+	pageTo      string
 	edition     string
 	publisher   string
 	date        string
@@ -60,6 +64,7 @@ type genericCitation struct {
 
 // options to control the slight differences in data population
 type genericCitationOpts struct {
+	verbose        bool
 	stripProtocol  bool
 	volumePrefix   bool
 	issuePrefix    bool
@@ -99,9 +104,6 @@ func newGenericCitation(v4url string, parts citationParts, opts genericCitationO
 	c := genericCitation{opts: opts}
 	c.v4url = v4url
 
-	// set options
-	c.isArticle = firstElementOf(parts["format"]) == "article"
-
 	// set values
 	citeAs := parts["explicit"]
 	authors := parts["author"]
@@ -110,6 +112,7 @@ func newGenericCitation(v4url string, parts citationParts, opts genericCitationO
 	compilers := parts["compiler"]
 	translators := parts["translator"]
 	title := firstElementOf(parts["title"])
+	format := firstElementOf(parts["format"])
 	subtitle := firstElementOf(parts["subtitle"])
 	journal := firstElementOf(parts["journal"])
 	volume := firstElementOf(parts["volume"])
@@ -125,6 +128,9 @@ func newGenericCitation(v4url string, parts citationParts, opts genericCitationO
 	isOnlineOnly := firstElementOf(parts["is_online_only"])
 	isVirgoURL := firstElementOf(parts["is_virgo_url"])
 
+	// set options
+	c.isArticle = format == "article"
+
 	c.setupCiteAs(citeAs)
 	c.setupAuthors(authors)
 	c.setupEditors(editors)
@@ -132,6 +138,7 @@ func newGenericCitation(v4url string, parts citationParts, opts genericCitationO
 	c.setupCompilers(compilers)
 	c.setupTranslators(translators)
 	c.setupTitle(title, subtitle)
+	c.setupFormat(format)
 	c.setupJournal(journal)
 	c.setupVolume(volume)
 	c.setupIssue(issue)
@@ -141,12 +148,17 @@ func newGenericCitation(v4url string, parts citationParts, opts genericCitationO
 	c.setupDate(date)
 	c.setupLink(url, doi, isOnlineOnly, isVirgoURL, serialNumbers)
 
-	//c.log()
+	c.log(parts)
 
 	return &c, nil
 }
 
-func (c *genericCitation) log() {
+func (c *genericCitation) log(parts citationParts) {
+	log.Printf("collected parts:")
+	for k, v := range parts {
+		log.Printf("    %-20s : %#v", k, v)
+	}
+
 	log.Printf("generic citation:")
 
 	for _, author := range c.authors {
@@ -174,6 +186,8 @@ func (c *genericCitation) log() {
 	log.Printf("    volume     : [%s]", c.volume)
 	log.Printf("    issue      : [%s]", c.issue)
 	log.Printf("    pages      : [%s]", c.pages)
+	log.Printf("    pageFrom   : [%s]", c.pageFrom)
+	log.Printf("    pageTo     : [%s]", c.pageTo)
 	log.Printf("    edition    : [%s]", c.edition)
 	log.Printf("    publisher  : [%s]", c.publisher)
 	log.Printf("    date       : [%s]  (%d) (%d) (%d)", c.date, c.year, c.month, c.day)
@@ -211,7 +225,13 @@ func (c *genericCitation) setupTitle(title, subtitle string) {
 		fullTitle = fullTitle + ": " + subtitle
 	}
 
+	fullTitle = removeTrailingPeriods(fullTitle)
+
 	c.title = fullTitle
+}
+
+func (c *genericCitation) setupFormat(format string) {
+	c.format = format
 }
 
 func (c *genericCitation) setupJournal(journal string) {
@@ -244,14 +264,20 @@ func (c *genericCitation) setupPages(pages string) {
 	pageRange := ""
 	prefix := ""
 
+	pageFrom := ""
+	pageTo := ""
+
 	switch {
 	case len(ends) == 2:
 		prefix = "pp."
-		pageRange = strings.TrimSpace(ends[0]) + " - " + strings.TrimSpace(ends[1])
+		pageFrom = strings.TrimSpace(ends[0])
+		pageTo = strings.TrimSpace(ends[1])
+		pageRange = pageFrom + " - " + pageTo
 
 	case len(ends) == 1:
 		prefix = "p."
-		pageRange = strings.TrimSpace(ends[0])
+		pageFrom = strings.TrimSpace(ends[0])
+		pageRange = pageFrom
 	}
 
 	fullPages := ""
@@ -265,6 +291,8 @@ func (c *genericCitation) setupPages(pages string) {
 	}
 
 	c.pages = fullPages
+	c.pageFrom = pageFrom
+	c.pageTo = pageTo
 }
 
 func (c *genericCitation) setupEdition(edition string) {
@@ -461,6 +489,12 @@ func cleanEndPunctuation(s string) string {
 
 	cleaned = stripEnclosers(cleaned, '(', ')')
 	cleaned = stripEnclosers(cleaned, '[', ']')
+
+	return cleaned
+}
+
+func removeTrailingPeriods(s string) string {
+	cleaned := re.trailingPeriods.ReplaceAllString(s, "")
 
 	return cleaned
 }
@@ -844,6 +878,14 @@ func wordsBySeparator(word, separator string) []string {
 	return words
 }
 
+func smallCaps(s string) string {
+	return fmt.Sprintf(`<span style="font-variant: small-caps;">%s</span>`, s)
+}
+
+func italics(s string) string {
+	return fmt.Sprintf(`<em>%s</em>`, s)
+}
+
 func init() {
 	re.volume = regexp.MustCompile(`(?i)^vol`)
 	re.issue = regexp.MustCompile(`(?i)^(n[ou]|iss)`)
@@ -852,6 +894,7 @@ func init() {
 	re.editionCorrect = regexp.MustCompile(`(?i) eds?\.( |$)`)
 	re.editionCorrectable = regexp.MustCompile(`(?i) ed(|ition)[[:punct:]]*$`)
 	re.fieldEnd = regexp.MustCompile(`[,;:\/\s]+$`)
+	re.trailingPeriods = regexp.MustCompile(`\.+$`)
 	re.capitalizeable = regexp.MustCompile(`^[a-z][a-z\s]`)
 	re.doubleQuoted = regexp.MustCompile(`(?U)[#{"}\p{Pi}\p{Pf}]`)
 	re.lowerLastNamePart = regexp.MustCompile(`(?U)^([[:lower:]])+([[[:lower:]]\s.-])*$`)

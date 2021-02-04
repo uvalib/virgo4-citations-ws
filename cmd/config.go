@@ -31,6 +31,7 @@ type serviceConfigFormats struct {
 	APA    serviceConfigFormat `json:"apa,omitempty"`
 	CiteAs serviceConfigFormat `json:"cite_as,omitempty"`
 	CMS    serviceConfigFormat `json:"cms,omitempty"`
+	LBB    serviceConfigFormat `json:"lbb,omitempty"`
 	MLA    serviceConfigFormat `json:"mla,omitempty"`
 	RIS    serviceConfigFormat `json:"ris,omitempty"`
 }
