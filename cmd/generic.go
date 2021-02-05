@@ -56,6 +56,7 @@ type genericCitation struct {
 	edition         string
 	publisher       string
 	publicationType string
+	dataSource      string
 	date            string
 	link            string
 	year            int
@@ -123,6 +124,7 @@ func newGenericCitation(v4url string, parts citationParts, opts genericCitationO
 	publisher := firstElementOf(parts["publisher"])
 	publishedLocation := firstElementOf(parts["published_location"])
 	publicationType := firstElementOf(parts["publication_type"])
+	dataSource := firstElementOf(parts["data_source"])
 	date := firstElementOf(parts["published_date"])
 	url := firstElementOf(parts["url"])
 	doi := firstElementOf(parts["doi"])
@@ -148,6 +150,7 @@ func newGenericCitation(v4url string, parts citationParts, opts genericCitationO
 	c.setupEdition(edition)
 	c.setupPublisher(publisher, publishedLocation)
 	c.setupPublicationType(publicationType)
+	c.setupDataSource(dataSource)
 	c.setupDate(date)
 	c.setupLink(url, doi, isOnlineOnly, isVirgoURL, serialNumbers)
 
@@ -169,26 +172,27 @@ func (c *genericCitation) log(parts citationParts) {
 	log.Printf("generic citation:")
 
 	for _, author := range c.authors {
-		log.Printf("    author     : [%s]", author)
+		log.Printf("    author          : [%s]", author)
 	}
 
 	for _, editor := range c.editors {
-		log.Printf("    editor     : [%s]", editor)
+		log.Printf("    editor          : [%s]", editor)
 	}
 
 	for _, advisor := range c.advisors {
-		log.Printf("    advisor    : [%s]", advisor)
+		log.Printf("    advisor         : [%s]", advisor)
 	}
 
 	for _, compiler := range c.compilers {
-		log.Printf("    compiler   : [%s]", compiler)
+		log.Printf("    compiler        : [%s]", compiler)
 	}
 
 	for _, translator := range c.translators {
-		log.Printf("    translator : [%s]", translator)
+		log.Printf("    translator      : [%s]", translator)
 	}
 
 	log.Printf("    title           : [%s]", c.title)
+	log.Printf("    format          : [%s]", c.format)
 	log.Printf("    journal         : [%s]", c.journal)
 	log.Printf("    volume          : [%s]", c.volume)
 	log.Printf("    issue           : [%s]", c.issue)
@@ -198,6 +202,7 @@ func (c *genericCitation) log(parts citationParts) {
 	log.Printf("    edition         : [%s]", c.edition)
 	log.Printf("    publisher       : [%s]", c.publisher)
 	log.Printf("    publicationType : [%s]", c.publicationType)
+	log.Printf("    dataSource      : [%s]", c.dataSource)
 	log.Printf("    date            : [%s]  (%d) (%d) (%d)", c.date, c.year, c.month, c.day)
 	log.Printf("    link            : [%s]", c.link)
 }
@@ -331,6 +336,10 @@ func (c *genericCitation) setupEdition(edition string) {
 
 func (c *genericCitation) setupPublicationType(publicationType string) {
 	c.publicationType = strings.ToLower(publicationType)
+}
+
+func (c *genericCitation) setupDataSource(dataSource string) {
+	c.dataSource = strings.ToLower(dataSource)
 }
 
 func (c *genericCitation) setupPublisher(publisher, publishedPlace string) {

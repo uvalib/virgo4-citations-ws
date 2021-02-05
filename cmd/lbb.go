@@ -297,23 +297,51 @@ func (e *lbbEncoder) mediaCitation() string {
 	return res
 }
 
+func (e *lbbEncoder) thesisCitation() string {
+	res := ""
+
+	author := firstElementOf(e.data.authors)
+
+	if s := firstElementOf(e.data.authors); s != "" {
+		s = e.buildAuthors([]string{author})
+		res = s + ", "
+	}
+
+	res += e.data.title
+
+	if s := e.newspaperDate(e.data.year, e.data.month, e.data.day); s != "" {
+		res += " ("
+		res += s
+		res += ")"
+	}
+
+	if s := e.data.publisher; s != "" {
+		res += " ("
+		res += s
+		res += ")"
+	}
+
+	res += "."
+
+	return res
+}
+
 func (e *lbbEncoder) Contents() (string, error) {
 	if e.preferCiteAs == true && len(e.data.citeAs) > 0 {
 		return strings.Join(e.data.citeAs, "\n"), nil
 	}
 
-	switch e.data.format {
-	case "book":
-		fallthrough
-	case "government_document":
+	switch {
+	case e.data.dataSource == "libraetd":
+		return e.thesisCitation(), nil
+
+	case e.data.format == "book" || e.data.format == "government_document":
 		return e.bookCitation(), nil
 
-	case "sound":
-		fallthrough
-	case "video":
+	case e.data.format == "sound" || e.data.format == "video":
 		return e.mediaCitation(), nil
 
-	case "article":
+	case e.data.format == "article":
 		return e.articleCitation(), nil
 
 	default:
