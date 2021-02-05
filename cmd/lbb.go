@@ -12,15 +12,14 @@ type lbbTableEntry struct {
 	re      *regexp.Regexp
 }
 
-var lbbCaseNamesAndInstitutionalAuthors []lbbTableEntry
-var lbbStates []lbbTableEntry
-var lbbCities []lbbTableEntry
-var lbbTerritories []lbbTableEntry
-var lbbAustralia []lbbTableEntry
-var lbbCanada []lbbTableEntry
-var lbbCountriesAndRegions []lbbTableEntry
-var lbbPublishingTerms []lbbTableEntry
-var lbbSubdivisions []lbbTableEntry
+type lbbREs struct {
+	lawJournals *regexp.Regexp
+	T6          []lbbTableEntry
+	T10         []lbbTableEntry
+	T13         []lbbTableEntry
+}
+
+var lbbTables lbbREs
 
 type lbbEncoder struct {
 	cfg          serviceConfigFormat
@@ -144,37 +143,37 @@ func (e *lbbEncoder) bookCitation() string {
 
 	// build parenthetical piece upward
 
-	var spaced []string
+	var spaceList []string
 
 	if e.data.edition != "" {
-		spaced = append(spaced, e.data.edition)
+		spaceList = append(spaceList, e.data.edition)
 	}
 
 	if e.data.year != 0 {
-		spaced = append(spaced, fmt.Sprintf("%d", e.data.year))
+		spaceList = append(spaceList, fmt.Sprintf("%d", e.data.year))
 	}
 
-	var commad []string
+	var commaList []string
 
 	if s := e.buildEditors(e.data.editors); s != "" {
-		commad = append(commad, s)
+		commaList = append(commaList, s)
 	}
 
 	if s := e.buildTranslators(e.data.translators); s != "" {
-		commad = append(commad, s)
+		commaList = append(commaList, s)
 	}
 
 	if s := e.buildEditors(e.data.editors); s != "" {
-		commad = append(commad, s)
+		commaList = append(commaList, s)
 	}
 
-	if len(spaced) > 0 {
-		commad = append(commad, strings.Join(spaced, " "))
+	if len(spaceList) > 0 {
+		commaList = append(commaList, strings.Join(spaceList, " "))
 	}
 
-	if len(commad) > 0 {
+	if len(commaList) > 0 {
 		res += " ("
-		res += strings.Join(commad, ", ")
+		res += strings.Join(commaList, ", ")
 		res += ")"
 	}
 
@@ -186,51 +185,94 @@ func (e *lbbEncoder) bookCitation() string {
 func (e *lbbEncoder) articleCitation() string {
 	res := ""
 
-	var commad []string
+	var commaList []string
 
 	if s := e.buildAuthors(e.data.authors); s != "" {
-		commad = append(commad, s)
+		commaList = append(commaList, s)
 	}
 
-	if s := italics(mlaTitle(e.data.title)); s != "" {
-		commad = append(commad, s)
+	if s := e.data.title; s != "" {
+		s = mlaTitle(s)
+		s = italics(s)
+		commaList = append(commaList, s)
 	}
 
-	if s := smallCaps(e.data.journal); s != "" {
-		commad = append(commad, s)
+	isLawReview := lbbTables.lawJournals.MatchString(e.data.journal)
+	isNewspaper := false
+
+	if isLawReview == true {
+		var spaceList []string
+
+		if s := e.data.volume; s != "" {
+			spaceList = append(spaceList, s)
+		}
+
+		if s := e.data.journal; s != "" {
+			s = e.abbreviateInstitutionalNamesInPeriodicalTitles(s)
+			s = smallCaps(s)
+			spaceList = append(spaceList, s)
+		}
+
+		if s := e.data.pageFrom; s != "" {
+			spaceList = append(spaceList, s)
+		}
+
+		if s := lbbDate(e.data.year, e.data.month, e.data.day, isLawReview, isNewspaper); s != "" {
+			s = fmt.Sprintf("(%s)", s)
+			spaceList = append(spaceList, s)
+		}
+
+		commaList = append(commaList, strings.Join(spaceList, " "))
+	} else {
+		if s := e.data.journal; s != "" {
+			s = e.abbreviateInstitutionalNamesInPeriodicalTitles(s)
+			if e.data.volume != "" {
+				s = e.data.volume + " " + s
+			}
+			s = smallCaps(s)
+			commaList = append(commaList, s)
+		}
+
+		if s := lbbDate(e.data.year, e.data.month, e.data.day, isLawReview, isNewspaper); s != "" {
+			commaList = append(commaList, s)
+		}
+
+		if s := e.data.pageFrom; s != "" {
+			commaList = append(commaList, fmt.Sprintf("at %s", s))
+		}
 	}
 
-	if s := lbbDate(e.data.year, e.data.month, e.data.day); s != "" {
-		commad = append(commad, s)
-	}
-
-	if e.data.pageFrom != "" {
-		commad = append(commad, fmt.Sprintf("at %s", e.data.pageFrom))
-	}
-
-	res = strings.Join(commad, ", ") + "."
+	res = strings.Join(commaList, ", ") + "."
 
 	return res
 }
 
 func (e *lbbEncoder) mediaCitation() string {
-	res := smallCaps(e.data.title)
+	res := ""
+
+	if e.data.format == "sound" {
+		if s := e.buildAuthors(e.data.authors); s != "" {
+			res = smallCaps(s) + ", "
+		}
+	}
+
+	res += smallCaps(e.data.title)
 
 	// build parenthetical piece upward
 
-	var spaced []string
+	var spaceList []string
 
 	if e.data.publisher != "" {
-		spaced = append(spaced, e.data.publisher)
+		spaceList = append(spaceList, e.data.publisher)
 	}
 
 	if e.data.year != 0 {
-		spaced = append(spaced, fmt.Sprintf("%d", e.data.year))
+		spaceList = append(spaceList, fmt.Sprintf("%d", e.data.year))
 	}
 
-	if len(spaced) > 0 {
+	if len(spaceList) > 0 {
 		res += " ("
-		res += strings.Join(spaced, " ")
+		res += strings.Join(spaceList, " ")
 		res += ")"
 	}
 
@@ -243,24 +285,6 @@ func (e *lbbEncoder) Contents() (string, error) {
 	if e.preferCiteAs == true && len(e.data.citeAs) > 0 {
 		return strings.Join(e.data.citeAs, "\n"), nil
 	}
-
-	/*
-	   "book"
-	   "government_document"
-
-	   "video"
-	   "sound"
-
-	   "journal"
-
-	   "music"
-	   "manuscript"
-	   "news"
-	   "thesis"
-	   "map"
-	   "art"
-	   "generic"
-	*/
 
 	switch e.data.format {
 	case "book":
@@ -283,7 +307,7 @@ func (e *lbbEncoder) Contents() (string, error) {
 	}
 }
 
-func lbbDate(y, m, d int) string {
+func lbbDate(y, m, d int, isLawReview, isNewspaper bool) string {
 	res := ""
 
 	month := monthName(m)
@@ -292,10 +316,10 @@ func lbbDate(y, m, d int) string {
 	}
 
 	switch {
-	case y != 0 && month != "" && d != 0:
+	case isLawReview == false && isNewspaper == true && y != 0 && month != "" && d != 0:
 		res = fmt.Sprintf("%s %d, %d", month, d, y)
 
-	case y != 0 && month != "":
+	case isLawReview == false && y != 0 && month != "":
 		res = fmt.Sprintf("%s %d", month, y)
 
 	case y != 0:
@@ -306,59 +330,51 @@ func lbbDate(y, m, d int) string {
 }
 
 func (e *lbbEncoder) abbreviateNames(str string) string {
-	res := e.abbreviateCaseNamesAndInstitutionalAuthors(str)
-	res = e.abbreviateGeographicalTerms(res)
-	return res
-}
-
-func (e *lbbEncoder) abbreviateCaseNamesAndInstitutionalAuthors(str string) string {
 	res := str
 
-	for i := range lbbCaseNamesAndInstitutionalAuthors {
-		entry := &lbbCaseNamesAndInstitutionalAuthors[i]
-
-		res = entry.re.ReplaceAllString(res, entry.abbrev)
-	}
+	res = e.applyTableT6(res)
+	res = e.applyTableT10(res)
 
 	return res
 }
 
-func (e *lbbEncoder) abbreviateGeographicalTerms(str string) string {
+func (e *lbbEncoder) abbreviateInstitutionalNamesInPeriodicalTitles(str string) string {
 	res := str
 
-	for i := range lbbStates {
-		entry := &lbbStates[i]
+	res = e.applyTableT13(res)
+	res = e.applyTableT6(res)
+	res = e.applyTableT10(res)
 
+	return res
+}
+
+func (e *lbbEncoder) applyTableT6(str string) string {
+	res := str
+
+	for i := range lbbTables.T6 {
+		entry := &lbbTables.T6[i]
 		res = entry.re.ReplaceAllString(res, entry.abbrev)
 	}
 
-	for i := range lbbCities {
-		entry := &lbbCities[i]
+	return res
+}
 
+func (e *lbbEncoder) applyTableT10(str string) string {
+	res := str
+
+	for i := range lbbTables.T10 {
+		entry := &lbbTables.T10[i]
 		res = entry.re.ReplaceAllString(res, entry.abbrev)
 	}
 
-	for i := range lbbTerritories {
-		entry := &lbbTerritories[i]
+	return res
+}
 
-		res = entry.re.ReplaceAllString(res, entry.abbrev)
-	}
+func (e *lbbEncoder) applyTableT13(str string) string {
+	res := str
 
-	for i := range lbbAustralia {
-		entry := &lbbAustralia[i]
-
-		res = entry.re.ReplaceAllString(res, entry.abbrev)
-	}
-
-	for i := range lbbCanada {
-		entry := &lbbCanada[i]
-
-		res = entry.re.ReplaceAllString(res, entry.abbrev)
-	}
-
-	for i := range lbbCountriesAndRegions {
-		entry := &lbbCountriesAndRegions[i]
-
+	for i := range lbbTables.T13 {
+		entry := &lbbTables.T13[i]
 		res = entry.re.ReplaceAllString(res, entry.abbrev)
 	}
 
@@ -366,7 +382,7 @@ func (e *lbbEncoder) abbreviateGeographicalTerms(str string) string {
 }
 
 func init() {
-	lbbCaseNamesAndInstitutionalAuthors = []lbbTableEntry{
+	caseNamesAndInstitutionalAuthors := []lbbTableEntry{
 		{pattern: "Academ(ic|y)", abbrev: "Acad."},
 		{pattern: "Account(ant|ing|ancy)", abbrev: "Acct."},
 		{pattern: "Administrat(ive|ion)", abbrev: "Admin."},
@@ -669,14 +685,7 @@ func init() {
 		{pattern: "Year(| )book", abbrev: "Y.B."},
 	}
 
-	for i := range lbbCaseNamesAndInstitutionalAuthors {
-		entry := &lbbCaseNamesAndInstitutionalAuthors[i]
-
-		pattern := fmt.Sprintf(`(?i)\b%s\b`, entry.pattern)
-		entry.re = regexp.MustCompile(pattern)
-	}
-
-	lbbStates = []lbbTableEntry{
+	usStates := []lbbTableEntry{
 		{pattern: "Alabama", abbrev: "Ala."},
 		{pattern: "Alaska", abbrev: "Alaska"},
 		{pattern: "Arizona", abbrev: "Ariz."},
@@ -729,14 +738,7 @@ func init() {
 		{pattern: "Wyoming", abbrev: "Wyo."},
 	}
 
-	for i := range lbbStates {
-		entry := &lbbStates[i]
-
-		pattern := fmt.Sprintf(`(?i)\b%s\b`, entry.pattern)
-		entry.re = regexp.MustCompile(pattern)
-	}
-
-	lbbCities = []lbbTableEntry{
+	usCities := []lbbTableEntry{
 		{pattern: "Baltimore", abbrev: "Balt."},
 		{pattern: "Boston", abbrev: "Bos."},
 		{pattern: "Chicago", abbrev: "Chi."},
@@ -751,14 +753,7 @@ func init() {
 		{pattern: "San Francisco", abbrev: "S.F."},
 	}
 
-	for i := range lbbCities {
-		entry := &lbbCities[i]
-
-		pattern := fmt.Sprintf(`(?i)\b%s\b`, entry.pattern)
-		entry.re = regexp.MustCompile(pattern)
-	}
-
-	lbbTerritories = []lbbTableEntry{
+	usTerritories := []lbbTableEntry{
 		{pattern: "American Samoa", abbrev: "Am. Sam."},
 		{pattern: "Guam", abbrev: "Guam"},
 		{pattern: "Northern Mariana Islands", abbrev: "N. Mar. I."},
@@ -766,14 +761,7 @@ func init() {
 		{pattern: "Virgin Islands", abbrev: "V.I."},
 	}
 
-	for i := range lbbTerritories {
-		entry := &lbbTerritories[i]
-
-		pattern := fmt.Sprintf(`(?i)\b%s\b`, entry.pattern)
-		entry.re = regexp.MustCompile(pattern)
-	}
-
-	lbbAustralia = []lbbTableEntry{
+	auStates := []lbbTableEntry{
 		{pattern: "Australian Capital Territory", abbrev: "Austl. Cap. Terr."},
 		{pattern: "New South Wales", abbrev: "N.S.W."},
 		{pattern: "Northern Territory", abbrev: "N. Terr."},
@@ -784,14 +772,7 @@ func init() {
 		{pattern: "Western Australia", abbrev: "W. Austl."},
 	}
 
-	for i := range lbbAustralia {
-		entry := &lbbAustralia[i]
-
-		pattern := fmt.Sprintf(`(?i)\b%s\b`, entry.pattern)
-		entry.re = regexp.MustCompile(pattern)
-	}
-
-	lbbCanada = []lbbTableEntry{
+	caProvincesAndTerritories := []lbbTableEntry{
 		{pattern: "Alberta", abbrev: "Alta."},
 		{pattern: "British Columbia", abbrev: "B.C."},
 		{pattern: "Manitoba", abbrev: "Man."},
@@ -807,14 +788,7 @@ func init() {
 		{pattern: "Yukon", abbrev: "Yukon"},
 	}
 
-	for i := range lbbCanada {
-		entry := &lbbCanada[i]
-
-		pattern := fmt.Sprintf(`(?i)\b%s\b`, entry.pattern)
-		entry.re = regexp.MustCompile(pattern)
-	}
-
-	lbbCountriesAndRegions = []lbbTableEntry{
+	countriesAndRegions := []lbbTableEntry{
 		{pattern: "Afghanistan", abbrev: "Afg."},
 		{pattern: "Africa", abbrev: "Afr."},
 		{pattern: "Albania", abbrev: "Alb."},
@@ -1039,10 +1013,113 @@ func init() {
 		{pattern: "Zimbabwe", abbrev: "Zim."},
 	}
 
-	for i := range lbbCountriesAndRegions {
-		entry := &lbbCountriesAndRegions[i]
+	geographicalTerms := append(append(append(append(append(usStates, usCities...), usTerritories...), auStates...), caProvincesAndTerritories...), countriesAndRegions...)
 
-		pattern := fmt.Sprintf(`(?i)\b%s\b`, entry.pattern)
-		entry.re = regexp.MustCompile(pattern)
+	institutionalNamesInPeriodicalTitles := []lbbTableEntry{
+		{pattern: "Adelaide", abbrev: "Adel."},
+		{pattern: "Air Force", abbrev: "A.F."},
+		{pattern: "Albany", abbrev: "Alb."},
+		{pattern: "American Bar Association (ABA)", abbrev: "A.B.A."},
+		{pattern: "American Intellectual Property Law Association", abbrev: "AIPLA"},
+		{pattern: "American Law Institute", abbrev: "A.L.I."},
+		{pattern: "Journal of the American Medical Association", abbrev: "JAMA"},
+		{pattern: "American Medical Association", abbrev: "AMA"},
+		{pattern: "American Society of Composers, Authors & Publishers", abbrev: "ASCAP"},
+		{pattern: "American University", abbrev: "Am. U."},
+		{pattern: "Boston College", abbrev: "B.C."},
+		{pattern: "Boston University", abbrev: "B.U."},
+		{pattern: "Brigham Young University", abbrev: "BYU"},
+		{pattern: "Brooklyn", abbrev: "Brook."},
+		{pattern: "Buffalo", abbrev: "Buff."},
+		{pattern: "California Law Review", abbrev: "Calif. L. Rev."},
+		{pattern: "Capital", abbrev: "Cap."},
+		{pattern: "Chapman", abbrev: "Chap."},
+		{pattern: "Chartered Life Underwriters", abbrev: "C.L.U."},
+		{pattern: "Cincinnati", abbrev: "Cin."},
+		{pattern: "City University of New York", abbrev: "CUNY"},
+		{pattern: "Cleveland", abbrev: "Clev."},
+		{pattern: "Columbia", abbrev: "Colum."},
+		{pattern: "Cumberland", abbrev: "Cumb."},
+		{pattern: "Denver", abbrev: "Denv."},
+		{pattern: "Detroit", abbrev: "Det."},
+		{pattern: "Dickinson", abbrev: "Dick."},
+		{pattern: "Duquesne", abbrev: "Duq."},
+		{pattern: "East(|ern)", abbrev: "E."},
+		{pattern: "Florida International University", abbrev: "FIU"},
+		{pattern: "Foreign Broadcast Information Service", abbrev: "F.B.I.S."},
+		{pattern: "George Mason", abbrev: "Geo. Mason"},
+		{pattern: "George Washington", abbrev: "Geo. Wash."},
+		{pattern: "Georgetown", abbrev: "Geo."},
+		{pattern: "Gonzaga", abbrev: "Gonz."},
+		{pattern: "Harvard", abbrev: "Harv."},
+		{pattern: "Howard", abbrev: "How."},
+		{pattern: "John Marshall", abbrev: "J. Marshall"},
+		{pattern: "Judge Advocate General(|'s)", abbrev: "JAG"},
+		{pattern: "Las Vegas", abbrev: "L.V."},
+		{pattern: "Lawyers Reports Annotated", abbrev: "L.R.A."},
+		{pattern: "Loyola", abbrev: "Loy."},
+		{pattern: "Marquette", abbrev: "Marq."},
+		{pattern: "Melbourne", abbrev: "Melb."},
+		{pattern: "Memphis", abbrev: "Mem."},
+		{pattern: "New England", abbrev: "New Eng."},
+		{pattern: "New York University(| School of Law)", abbrev: "N.Y.U."},
+		{pattern: "North(|ern)", abbrev: "N."},
+		{pattern: "Northeast(|ern)", abbrev: "Ne."},
+		{pattern: "Northwest(|ern)", abbrev: "Nw."},
+		{pattern: "Pepperdine", abbrev: "Pepp."},
+		{pattern: "Pittsburgh", abbrev: "Pitt."},
+		{pattern: "Richmond", abbrev: "Rich."},
+		{pattern: "Rocky Mountain Mineral Law Institute", abbrev: "Rocky Mtn. Min. L. Inst."},
+		{pattern: "Saint Louis", abbrev: "St. Louis"},
+		{pattern: "San Fernando Valley", abbrev: "San Fern. V."},
+		{pattern: "South(|ern)", abbrev: "S."},
+		{pattern: "Southeast(|ern)", abbrev: "Se."},
+		{pattern: "Southern Methodist University", abbrev: "SMU"},
+		{pattern: "Southwest(|ern)", abbrev: "Sw."},
+		{pattern: "Stanford", abbrev: "Stan."},
+		{pattern: "State", abbrev: "St."},
+		{pattern: "Temple", abbrev: "Temp."},
+		{pattern: "Thomas Jefferson", abbrev: "T. Jefferson"},
+		{pattern: "Thomas M. Cooley", abbrev: "T.M. Cooley"},
+		{pattern: "Thurgood Marshall", abbrev: "T. Marshall"},
+		{pattern: "Toledo", abbrev: "Tol."},
+		{pattern: "Tulane", abbrev: "Tul."},
+		{pattern: "Universidad de Puerto Rico", abbrev: "U. P.R."},
+		{pattern: "University of California", abbrev: "U.C."},
+		{pattern: "University of California - Los Angeles", abbrev: "UCLA"},
+		{pattern: "University of Missouri Kansas City", abbrev: "UMKC"},
+		{pattern: "University of the District of Columbia, David A. Clarke School of Law", abbrev: "UDC/DCSL"},
+		{pattern: "University of West Los Angeles", abbrev: "UWLA"},
+		{pattern: "Valparaiso", abbrev: "Val."},
+		{pattern: "Vanderbilt", abbrev: "Vand."},
+		{pattern: "Villanova", abbrev: "Vill."},
+		{pattern: "Washington & Lee", abbrev: "Wash. & Lee"},
+		{pattern: "West(|ern)", abbrev: "W."},
+		{pattern: "William & Mary", abbrev: "Wm. & Mary"},
+		{pattern: "William Mitchell", abbrev: "Wm. Mitchell"},
+	}
+
+	lawJournals := `(?i)\b(law|court|legislation|legal|justice|circuit|tax|constitutional|litigation|dispute|patent|trademark|regulation|bill of rights|civil rights|civil liberties|bankruptcy|national security|intellectual)\b`
+
+	lbbTables = lbbREs{
+		lawJournals: regexp.MustCompile(lawJournals),
+		T6:          caseNamesAndInstitutionalAuthors,
+		T10:         geographicalTerms,
+		T13:         institutionalNamesInPeriodicalTitles,
+	}
+
+	for i := range lbbTables.T6 {
+		entry := &lbbTables.T6[i]
+		entry.re = regexp.MustCompile(fmt.Sprintf(`(?i)\b%s\b`, entry.pattern))
+	}
+
+	for i := range lbbTables.T10 {
+		entry := &lbbTables.T10[i]
+		entry.re = regexp.MustCompile(fmt.Sprintf(`(?i)\b%s\b`, entry.pattern))
+	}
+
+	for i := range lbbTables.T13 {
+		entry := &lbbTables.T13[i]
+		entry.re = regexp.MustCompile(fmt.Sprintf(`(?i)\b%s\b`, entry.pattern))
 	}
 }
