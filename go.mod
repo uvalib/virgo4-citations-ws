@@ -9,7 +9,7 @@ require (
 	github.com/leodido/go-urn v1.2.1 // indirect
 	github.com/microcosm-cc/bluemonday v1.0.4
 	github.com/prometheus/client_golang v1.9.0
-	github.com/prometheus/procfs v0.3.0 // indirect
+	github.com/prometheus/procfs v0.4.0 // indirect
 	github.com/sirupsen/logrus v1.7.0 // indirect
 	github.com/ugorji/go v1.2.4 // indirect
 	github.com/uvalib/virgo4-api v0.0.0-20210111191046-ddb7c758e656

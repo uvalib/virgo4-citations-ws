@@ -16,6 +16,7 @@ type lbbREs struct {
 	lawJournals *regexp.Regexp
 	T6          []lbbTableEntry
 	T10         []lbbTableEntry
+	T12         []lbbTableEntry
 	T13         []lbbTableEntry
 }
 
@@ -45,7 +46,7 @@ func (e *lbbEncoder) Populate(parts citationParts) error {
 	var err error
 
 	opts := genericCitationOpts{
-		verbose:        true,
+		//verbose:        true,
 		stripProtocol:  true,
 		volumePrefix:   false,
 		issuePrefix:    false,
@@ -197,10 +198,14 @@ func (e *lbbEncoder) articleCitation() string {
 		commaList = append(commaList, s)
 	}
 
-	isLawReview := lbbTables.lawJournals.MatchString(e.data.journal)
-	isNewspaper := false
+	isNewspaper := e.data.publicationType == "news"
+	isAcademicJournal := e.data.publicationType == "academic journal"
+	isReview := e.data.publicationType == "review"
+	isMagazine := e.data.publicationType == "magazines"
 
-	if isLawReview == true {
+	isLawReviewJournal := (isAcademicJournal || isReview) && lbbTables.lawJournals.MatchString(e.data.journal)
+
+	if isLawReviewJournal == true {
 		var spaceList []string
 
 		if s := e.data.volume; s != "" {
@@ -217,7 +222,7 @@ func (e *lbbEncoder) articleCitation() string {
 			spaceList = append(spaceList, s)
 		}
 
-		if s := lbbDate(e.data.year, e.data.month, e.data.day, isLawReview, isNewspaper); s != "" {
+		if s := e.lawReviewJournalDate(e.data.year, e.data.month, e.data.day); s != "" {
 			s = fmt.Sprintf("(%s)", s)
 			spaceList = append(spaceList, s)
 		}
@@ -233,8 +238,19 @@ func (e *lbbEncoder) articleCitation() string {
 			commaList = append(commaList, s)
 		}
 
-		if s := lbbDate(e.data.year, e.data.month, e.data.day, isLawReview, isNewspaper); s != "" {
-			commaList = append(commaList, s)
+		switch {
+		case isNewspaper == true:
+			if s := e.newspaperDate(e.data.year, e.data.month, e.data.day); s != "" {
+				commaList = append(commaList, s)
+			}
+
+		case isMagazine == true:
+			fallthrough
+
+		default:
+			if s := e.magazineDate(e.data.year, e.data.month, e.data.day); s != "" {
+				commaList = append(commaList, s)
+			}
 		}
 
 		if s := e.data.pageFrom; s != "" {
@@ -307,19 +323,49 @@ func (e *lbbEncoder) Contents() (string, error) {
 	}
 }
 
-func lbbDate(y, m, d int, isLawReview, isNewspaper bool) string {
+func (e *lbbEncoder) lawReviewJournalDate(y, m, d int) string {
 	res := ""
 
-	month := monthName(m)
-	if len(month) > 3 {
-		month = month[:3] + "."
+	switch {
+	case y != 0:
+		res = fmt.Sprintf("%d", y)
 	}
 
+	return res
+}
+
+func (e *lbbEncoder) monthName(m int) string {
+	month := monthName(m)
+
+	return e.applyTableT12(month)
+}
+
+func (e *lbbEncoder) newspaperDate(y, m, d int) string {
+	res := ""
+
+	month := e.monthName(m)
+
 	switch {
-	case isLawReview == false && isNewspaper == true && y != 0 && month != "" && d != 0:
+	case y != 0 && month != "" && d != 0:
 		res = fmt.Sprintf("%s %d, %d", month, d, y)
 
-	case isLawReview == false && y != 0 && month != "":
+	case y != 0 && month != "":
+		res = fmt.Sprintf("%s %d", month, y)
+
+	case y != 0:
+		res = fmt.Sprintf("%d", y)
+	}
+
+	return res
+}
+
+func (e *lbbEncoder) magazineDate(y, m, d int) string {
+	res := ""
+
+	month := e.monthName(m)
+
+	switch {
+	case y != 0 && month != "":
 		res = fmt.Sprintf("%s %d", month, y)
 
 	case y != 0:
@@ -364,6 +410,17 @@ func (e *lbbEncoder) applyTableT10(str string) string {
 
 	for i := range lbbTables.T10 {
 		entry := &lbbTables.T10[i]
+		res = entry.re.ReplaceAllString(res, entry.abbrev)
+	}
+
+	return res
+}
+
+func (e *lbbEncoder) applyTableT12(str string) string {
+	res := str
+
+	for i := range lbbTables.T12 {
+		entry := &lbbTables.T12[i]
 		res = entry.re.ReplaceAllString(res, entry.abbrev)
 	}
 
@@ -1099,27 +1156,72 @@ func init() {
 		{pattern: "William Mitchell", abbrev: "Wm. Mitchell"},
 	}
 
-	lawJournals := `(?i)\b(law|court|legislation|legal|justice|circuit|tax|constitutional|litigation|dispute|patent|trademark|regulation|bill of rights|civil rights|civil liberties|bankruptcy|national security|intellectual)\b`
+	monthNames := []lbbTableEntry{
+		{pattern: "January", abbrev: "Jan."},
+		{pattern: "February", abbrev: "Feb."},
+		{pattern: "March", abbrev: "Mar."},
+		{pattern: "April", abbrev: "Apr."},
+		{pattern: "May", abbrev: "May"},
+		{pattern: "June", abbrev: "June"},
+		{pattern: "July", abbrev: "July"},
+		{pattern: "August", abbrev: "Aug."},
+		{pattern: "September", abbrev: "Sept."},
+		{pattern: "October", abbrev: "Oct."},
+		{pattern: "November", abbrev: "Nov."},
+		{pattern: "December", abbrev: "Dec."},
+	}
+
+	lawKeywords := []string{
+		"bankruptcy",
+		"bar",
+		"bill of rights",
+		"circuit",
+		"civil (libert(y|ies)|right(|s))",
+		"constitution(|al)",
+		"court(|s)",
+		"dispute(|s)",
+		"intellectual",
+		"justice",
+		"law",
+		"legal",
+		"legislation",
+		"litigation",
+		"national security",
+		"patent",
+		"regulation",
+		"tax",
+		"trademark",
+	}
+
+	wordPattern := `(?i)\b(%s)\b`
+
+	lawJournals := fmt.Sprintf(wordPattern, strings.Join(lawKeywords, "|"))
 
 	lbbTables = lbbREs{
 		lawJournals: regexp.MustCompile(lawJournals),
 		T6:          caseNamesAndInstitutionalAuthors,
 		T10:         geographicalTerms,
+		T12:         monthNames,
 		T13:         institutionalNamesInPeriodicalTitles,
 	}
 
 	for i := range lbbTables.T6 {
 		entry := &lbbTables.T6[i]
-		entry.re = regexp.MustCompile(fmt.Sprintf(`(?i)\b%s\b`, entry.pattern))
+		entry.re = regexp.MustCompile(fmt.Sprintf(wordPattern, entry.pattern))
 	}
 
 	for i := range lbbTables.T10 {
 		entry := &lbbTables.T10[i]
-		entry.re = regexp.MustCompile(fmt.Sprintf(`(?i)\b%s\b`, entry.pattern))
+		entry.re = regexp.MustCompile(fmt.Sprintf(wordPattern, entry.pattern))
+	}
+
+	for i := range lbbTables.T12 {
+		entry := &lbbTables.T12[i]
+		entry.re = regexp.MustCompile(fmt.Sprintf(wordPattern, entry.pattern))
 	}
 
 	for i := range lbbTables.T13 {
 		entry := &lbbTables.T13[i]
-		entry.re = regexp.MustCompile(fmt.Sprintf(`(?i)\b%s\b`, entry.pattern))
+		entry.re = regexp.MustCompile(fmt.Sprintf(wordPattern, entry.pattern))
 	}
 }

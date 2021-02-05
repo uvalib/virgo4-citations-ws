@@ -36,30 +36,31 @@ var lowerCaseWordMap map[string]bool
 
 // data common among CMS/APA/MLA citations
 type genericCitation struct {
-	v4url       string
-	opts        genericCitationOpts
-	isArticle   bool
-	citeAs      []string
-	authors     []string
-	editors     []string
-	advisors    []string
-	compilers   []string
-	translators []string
-	title       string
-	format      string
-	journal     string
-	volume      string
-	issue       string
-	pages       string
-	pageFrom    string
-	pageTo      string
-	edition     string
-	publisher   string
-	date        string
-	link        string
-	year        int
-	month       int
-	day         int
+	v4url           string
+	opts            genericCitationOpts
+	isArticle       bool
+	citeAs          []string
+	authors         []string
+	editors         []string
+	advisors        []string
+	compilers       []string
+	translators     []string
+	title           string
+	format          string
+	journal         string
+	volume          string
+	issue           string
+	pages           string
+	pageFrom        string
+	pageTo          string
+	edition         string
+	publisher       string
+	publicationType string
+	date            string
+	link            string
+	year            int
+	month           int
+	day             int
 }
 
 // options to control the slight differences in data population
@@ -121,6 +122,7 @@ func newGenericCitation(v4url string, parts citationParts, opts genericCitationO
 	edition := firstElementOf(parts["edition"])
 	publisher := firstElementOf(parts["publisher"])
 	publishedLocation := firstElementOf(parts["published_location"])
+	publicationType := firstElementOf(parts["publication_type"])
 	date := firstElementOf(parts["published_date"])
 	url := firstElementOf(parts["url"])
 	doi := firstElementOf(parts["doi"])
@@ -145,15 +147,20 @@ func newGenericCitation(v4url string, parts citationParts, opts genericCitationO
 	c.setupPages(pages)
 	c.setupEdition(edition)
 	c.setupPublisher(publisher, publishedLocation)
+	c.setupPublicationType(publicationType)
 	c.setupDate(date)
 	c.setupLink(url, doi, isOnlineOnly, isVirgoURL, serialNumbers)
 
-	//c.log(parts)
+	c.log(parts)
 
 	return &c, nil
 }
 
 func (c *genericCitation) log(parts citationParts) {
+	if c.opts.verbose == false {
+		return
+	}
+
 	log.Printf("collected parts:")
 	for k, v := range parts {
 		log.Printf("    %-20s : %#v", k, v)
@@ -181,17 +188,18 @@ func (c *genericCitation) log(parts citationParts) {
 		log.Printf("    translator : [%s]", translator)
 	}
 
-	log.Printf("    title      : [%s]", c.title)
-	log.Printf("    journal    : [%s]", c.journal)
-	log.Printf("    volume     : [%s]", c.volume)
-	log.Printf("    issue      : [%s]", c.issue)
-	log.Printf("    pages      : [%s]", c.pages)
-	log.Printf("    pageFrom   : [%s]", c.pageFrom)
-	log.Printf("    pageTo     : [%s]", c.pageTo)
-	log.Printf("    edition    : [%s]", c.edition)
-	log.Printf("    publisher  : [%s]", c.publisher)
-	log.Printf("    date       : [%s]  (%d) (%d) (%d)", c.date, c.year, c.month, c.day)
-	log.Printf("    link       : [%s]", c.link)
+	log.Printf("    title           : [%s]", c.title)
+	log.Printf("    journal         : [%s]", c.journal)
+	log.Printf("    volume          : [%s]", c.volume)
+	log.Printf("    issue           : [%s]", c.issue)
+	log.Printf("    pages           : [%s]", c.pages)
+	log.Printf("    pageFrom        : [%s]", c.pageFrom)
+	log.Printf("    pageTo          : [%s]", c.pageTo)
+	log.Printf("    edition         : [%s]", c.edition)
+	log.Printf("    publisher       : [%s]", c.publisher)
+	log.Printf("    publicationType : [%s]", c.publicationType)
+	log.Printf("    date            : [%s]  (%d) (%d) (%d)", c.date, c.year, c.month, c.day)
+	log.Printf("    link            : [%s]", c.link)
 }
 
 func (c *genericCitation) setupCiteAs(citeAs []string) {
@@ -319,6 +327,10 @@ func (c *genericCitation) setupEdition(edition string) {
 	}
 
 	c.edition = fullEdition
+}
+
+func (c *genericCitation) setupPublicationType(publicationType string) {
+	c.publicationType = strings.ToLower(publicationType)
 }
 
 func (c *genericCitation) setupPublisher(publisher, publishedPlace string) {
