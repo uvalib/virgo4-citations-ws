@@ -24,8 +24,8 @@ func (p *serviceContext) citationHandler(c *gin.Context, json bool, citations []
 		return
 	}
 
-	// single non-json citation uses configured values
-	if json == false && len(citations) == 1 {
+	// single non-json or inline citation uses configured values
+	if (json == false || s.client.opts.inline == true) && len(citations) == 1 {
 		s.serveSingleCitation(citations[0])
 		return
 	}
