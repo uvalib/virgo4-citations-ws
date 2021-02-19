@@ -168,7 +168,7 @@ func (s *citationsContext) serveMultipleCitations(citations []citationType) {
 		Value string `json:"value"`
 	}
 
-	var resp []citationResp
+	resp := []citationResp{}
 
 	for _, citation := range citations {
 		data, err := citation.Contents()
