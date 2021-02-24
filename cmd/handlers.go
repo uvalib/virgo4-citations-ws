@@ -129,10 +129,24 @@ func (p *serviceContext) healthCheckHandler(c *gin.Context) {
 	c.JSON(http.StatusOK, hcMap)
 }
 
+func (s *citationsContext) getContents(citation citationType) (string, error) {
+	data, err := citation.Contents()
+
+	if err != nil {
+		return "", err
+	}
+
+	if s.client.opts.nohtml == true {
+		data = s.svc.policy.Sanitize(data)
+	}
+
+	return data, nil
+}
+
 func (s *citationsContext) serveSingleCitation(citation citationType) {
 	c := s.client.ginCtx
 
-	data, err := citation.Contents()
+	data, err := s.getContents(citation)
 
 	if err != nil {
 		c.String(http.StatusInternalServerError, err.Error())
@@ -171,7 +185,7 @@ func (s *citationsContext) serveMultipleCitations(citations []citationType) {
 	resp := []citationResp{}
 
 	for _, citation := range citations {
-		data, err := citation.Contents()
+		data, err := s.getContents(citation)
 
 		if err != nil {
 			s.log("WARNING: failed to generate %s citation: %s", citation.Label(), err.Error())

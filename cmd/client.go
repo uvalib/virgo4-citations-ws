@@ -15,6 +15,7 @@ type clientOpts struct {
 	debug   bool // controls whether debug info is added to response json
 	verbose bool // controls whether verbose requests/responses are logged
 	inline  bool // controls whether citations are provided as downloads or inline
+	nohtml  bool // controls whether citations contain html elements
 }
 
 type clientContext struct {
@@ -51,6 +52,7 @@ func (c *clientContext) init(p *serviceContext, ctx *gin.Context) {
 	c.opts.debug = boolOptionWithFallback(ctx.Query("debug"), false)
 	c.opts.verbose = boolOptionWithFallback(ctx.Query("verbose"), false)
 	c.opts.inline = boolOptionWithFallback(ctx.Query("inline"), false)
+	c.opts.nohtml = boolOptionWithFallback(ctx.Query("nohtml"), false)
 }
 
 func (c *clientContext) logRequest() {
