@@ -27,6 +27,7 @@ type lbbEncoder struct {
 	url          string
 	preferCiteAs bool
 	data         *genericCitation
+	ctx          *clientContext
 }
 
 func newLbbEncoder(cfg serviceConfigFormat, preferCiteAs bool) *lbbEncoder {
@@ -38,8 +39,9 @@ func newLbbEncoder(cfg serviceConfigFormat, preferCiteAs bool) *lbbEncoder {
 	return &e
 }
 
-func (e *lbbEncoder) Init(url string) {
+func (e *lbbEncoder) Init(c *clientContext, url string) {
 	e.url = url
+	e.ctx = c
 }
 
 func (e *lbbEncoder) Populate(parts citationParts) error {
@@ -137,10 +139,10 @@ func (e *lbbEncoder) bookCitation() string {
 	authors := e.buildAuthors(e.data.authors)
 
 	if authors != "" {
-		res = smallCaps(authors) + ", "
+		res = e.ctx.smallCaps(authors) + ", "
 	}
 
-	res += smallCaps(e.data.title)
+	res += e.ctx.smallCaps(e.data.title)
 
 	// build parenthetical piece upward
 
@@ -194,7 +196,7 @@ func (e *lbbEncoder) articleCitation() string {
 
 	if s := e.data.title; s != "" {
 		s = mlaTitle(s)
-		s = italics(s)
+		s = e.ctx.italics(s)
 		commaList = append(commaList, s)
 	}
 
@@ -214,7 +216,7 @@ func (e *lbbEncoder) articleCitation() string {
 
 		if s := e.data.journal; s != "" {
 			s = e.abbreviateInstitutionalNamesInPeriodicalTitles(s)
-			s = smallCaps(s)
+			s = e.ctx.smallCaps(s)
 			spaceList = append(spaceList, s)
 		}
 
@@ -234,7 +236,7 @@ func (e *lbbEncoder) articleCitation() string {
 			if e.data.volume != "" {
 				s = e.data.volume + " " + s
 			}
-			s = smallCaps(s)
+			s = e.ctx.smallCaps(s)
 			commaList = append(commaList, s)
 		}
 
@@ -268,11 +270,11 @@ func (e *lbbEncoder) mediaCitation() string {
 
 	if e.data.format == "sound" {
 		if s := e.buildAuthors(e.data.authors); s != "" {
-			res = smallCaps(s) + ", "
+			res = e.ctx.smallCaps(s) + ", "
 		}
 	}
 
-	res += smallCaps(e.data.title)
+	res += e.ctx.smallCaps(e.data.title)
 
 	// build parenthetical piece upward
 

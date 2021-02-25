@@ -8,19 +8,16 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-func (p *serviceContext) citationHandler(c *gin.Context, json bool, citations []citationType) {
-	cl := clientContext{}
-	cl.init(p, c)
-
+func (p *serviceContext) citationHandler(c *clientContext, json bool, citations []citationType) {
 	s := citationsContext{}
-	s.init(p, &cl)
+	s.init(p, c)
 
-	cl.logRequest()
+	c.logRequest()
 	resp := s.handleCitationRequest(citations)
-	cl.logResponse(resp)
+	c.logResponse(resp)
 
 	if resp.err != nil {
-		c.String(resp.status, resp.err.Error())
+		c.ginCtx.String(resp.status, resp.err.Error())
 		return
 	}
 
@@ -34,7 +31,10 @@ func (p *serviceContext) citationHandler(c *gin.Context, json bool, citations []
 }
 
 func (p *serviceContext) allHandler(c *gin.Context) {
-	p.citationHandler(c, true, []citationType{
+	cl := clientContext{}
+	cl.init(p, c)
+
+	p.citationHandler(&cl, true, []citationType{
 		newMlaEncoder(p.config.Formats.MLA, true),
 		newApaEncoder(p.config.Formats.APA, true),
 		newCmsEncoder(p.config.Formats.CMS, true),
@@ -43,27 +43,45 @@ func (p *serviceContext) allHandler(c *gin.Context) {
 }
 
 func (p *serviceContext) apaHandler(c *gin.Context) {
-	p.citationHandler(c, true, []citationType{newApaEncoder(p.config.Formats.APA, true)})
+	cl := clientContext{}
+	cl.init(p, c)
+
+	p.citationHandler(&cl, true, []citationType{newApaEncoder(p.config.Formats.APA, true)})
 }
 
 func (p *serviceContext) citeAsHandler(c *gin.Context) {
-	p.citationHandler(c, true, []citationType{newCiteAsEncoder(p.config.Formats.CiteAs)})
+	cl := clientContext{}
+	cl.init(p, c)
+
+	p.citationHandler(&cl, true, []citationType{newCiteAsEncoder(p.config.Formats.CiteAs)})
 }
 
 func (p *serviceContext) cmsHandler(c *gin.Context) {
-	p.citationHandler(c, true, []citationType{newCmsEncoder(p.config.Formats.CMS, true)})
+	cl := clientContext{}
+	cl.init(p, c)
+
+	p.citationHandler(&cl, true, []citationType{newCmsEncoder(p.config.Formats.CMS, true)})
 }
 
 func (p *serviceContext) lbbHandler(c *gin.Context) {
-	p.citationHandler(c, true, []citationType{newLbbEncoder(p.config.Formats.LBB, true)})
+	cl := clientContext{}
+	cl.init(p, c)
+
+	p.citationHandler(&cl, true, []citationType{newLbbEncoder(p.config.Formats.LBB, true)})
 }
 
 func (p *serviceContext) mlaHandler(c *gin.Context) {
-	p.citationHandler(c, true, []citationType{newMlaEncoder(p.config.Formats.MLA, true)})
+	cl := clientContext{}
+	cl.init(p, c)
+
+	p.citationHandler(&cl, true, []citationType{newMlaEncoder(p.config.Formats.MLA, true)})
 }
 
 func (p *serviceContext) risHandler(c *gin.Context) {
-	p.citationHandler(c, false, []citationType{newRisEncoder(p.config.Formats.RIS)})
+	cl := clientContext{}
+	cl.init(p, c)
+
+	p.citationHandler(&cl, false, []citationType{newRisEncoder(p.config.Formats.RIS)})
 }
 
 func (p *serviceContext) unapiHandler(c *gin.Context) {
@@ -91,7 +109,10 @@ func (p *serviceContext) unapiHandler(c *gin.Context) {
 	}
 
 	// id and format params: the citation itself
-	p.citationHandler(c, false, []citationType{newRisEncoder(p.config.Formats.RIS)})
+	cl := clientContext{}
+	cl.init(p, c)
+
+	p.citationHandler(&cl, false, []citationType{newRisEncoder(p.config.Formats.RIS)})
 }
 
 func (p *serviceContext) ignoreHandler(c *gin.Context) {
@@ -136,9 +157,7 @@ func (s *citationsContext) getContents(citation citationType) (string, error) {
 		return "", err
 	}
 
-	if s.client.opts.nohtml == true {
-		data = s.svc.policy.Sanitize(data)
-	}
+	// extra formatting/sanitizing could go here
 
 	return data, nil
 }

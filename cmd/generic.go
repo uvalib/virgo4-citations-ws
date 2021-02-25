@@ -899,14 +899,6 @@ func wordsBySeparator(word, separator string) []string {
 	return words
 }
 
-func smallCaps(s string) string {
-	return fmt.Sprintf(`<span style="font-variant: small-caps;">%s</span>`, s)
-}
-
-func italics(s string) string {
-	return fmt.Sprintf(`<em>%s</em>`, s)
-}
-
 func init() {
 	re.volume = regexp.MustCompile(`(?i)^vol`)
 	re.issue = regexp.MustCompile(`(?i)^(n[ou]|iss)`)

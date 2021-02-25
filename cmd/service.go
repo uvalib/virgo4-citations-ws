@@ -10,8 +10,6 @@ import (
 	"runtime"
 	"strings"
 	"time"
-
-	"github.com/microcosm-cc/bluemonday"
 )
 
 // git commit used for this build; supplied at compile time
@@ -32,7 +30,6 @@ type serviceContext struct {
 	config       *serviceConfig
 	version      serviceVersion
 	pools        servicePools
-	policy       *bluemonday.Policy
 }
 
 func (p *serviceContext) initVersion() {
@@ -82,7 +79,6 @@ func initializeService(cfg *serviceConfig) *serviceContext {
 
 	p.config = cfg
 	p.randomSource = rand.New(rand.NewSource(time.Now().UnixNano()))
-	p.policy = bluemonday.StrictPolicy()
 
 	p.initVersion()
 	p.initPools()

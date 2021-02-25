@@ -53,7 +53,7 @@ func newRisEncoder(cfg serviceConfigFormat) *risEncoder {
 	return &e
 }
 
-func (e *risEncoder) Init(url string) {
+func (e *risEncoder) Init(c *clientContext, url string) {
 	e.url = url
 }
 

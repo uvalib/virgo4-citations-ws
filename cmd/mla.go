@@ -10,6 +10,7 @@ type mlaEncoder struct {
 	url          string
 	preferCiteAs bool
 	data         *genericCitation
+	ctx          *clientContext
 }
 
 func newMlaEncoder(cfg serviceConfigFormat, preferCiteAs bool) *mlaEncoder {
@@ -21,8 +22,9 @@ func newMlaEncoder(cfg serviceConfigFormat, preferCiteAs bool) *mlaEncoder {
 	return &e
 }
 
-func (e *mlaEncoder) Init(url string) {
+func (e *mlaEncoder) Init(c *clientContext, url string) {
 	e.url = url
+	e.ctx = c
 }
 
 func (e *mlaEncoder) Populate(parts citationParts) error {
@@ -169,7 +171,7 @@ func (e *mlaEncoder) Contents() (string, error) {
 		if e.data.isArticle == true {
 			res += `"` + doubleToSingleQuotes(title) + `."`
 		} else {
-			res += italics(title) + "."
+			res += e.ctx.italics(title) + "."
 		}
 	}
 
@@ -185,7 +187,7 @@ func (e *mlaEncoder) Contents() (string, error) {
 	if e.data.journal != "" {
 		res = appendUnlessEndsWith(res, " ", []string{" "})
 
-		res += italics(mlaTitle(e.data.journal))
+		res += e.ctx.italics(mlaTitle(e.data.journal))
 	}
 
 	/*

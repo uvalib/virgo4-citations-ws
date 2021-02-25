@@ -19,7 +19,7 @@ func newCiteAsEncoder(cfg serviceConfigFormat) *citeAsEncoder {
 	return &e
 }
 
-func (e *citeAsEncoder) Init(url string) {
+func (e *citeAsEncoder) Init(c *clientContext, url string) {
 	e.url = url
 }
 

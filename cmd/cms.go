@@ -9,6 +9,7 @@ type cmsEncoder struct {
 	url          string
 	preferCiteAs bool
 	data         *genericCitation
+	ctx          *clientContext
 }
 
 func newCmsEncoder(cfg serviceConfigFormat, preferCiteAs bool) *cmsEncoder {
@@ -20,8 +21,9 @@ func newCmsEncoder(cfg serviceConfigFormat, preferCiteAs bool) *cmsEncoder {
 	return &e
 }
 
-func (e *cmsEncoder) Init(url string) {
+func (e *cmsEncoder) Init(c *clientContext, url string) {
 	e.url = url
+	e.ctx = c
 }
 
 func (e *cmsEncoder) Populate(parts citationParts) error {
@@ -182,7 +184,7 @@ func (e *cmsEncoder) Contents() (string, error) {
 		if e.data.isArticle == true {
 			res += `"` + doubleToSingleQuotes(title) + `."`
 		} else {
-			res += italics(title) + "."
+			res += e.ctx.italics(title) + "."
 		}
 	}
 
@@ -222,7 +224,7 @@ func (e *cmsEncoder) Contents() (string, error) {
 
 	if e.data.journal != "" {
 		res = appendUnlessEndsWith(res, " ", []string{" "})
-		res += italics(mlaTitle(e.data.journal))
+		res += e.ctx.italics(mlaTitle(e.data.journal))
 	}
 
 	/*

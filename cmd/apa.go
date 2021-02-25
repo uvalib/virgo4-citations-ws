@@ -10,6 +10,7 @@ type apaEncoder struct {
 	url          string
 	preferCiteAs bool
 	data         *genericCitation
+	ctx          *clientContext
 }
 
 func newApaEncoder(cfg serviceConfigFormat, preferCiteAs bool) *apaEncoder {
@@ -21,8 +22,9 @@ func newApaEncoder(cfg serviceConfigFormat, preferCiteAs bool) *apaEncoder {
 	return &e
 }
 
-func (e *apaEncoder) Init(url string) {
+func (e *apaEncoder) Init(c *clientContext, url string) {
 	e.url = url
+	e.ctx = c
 }
 
 func (e *apaEncoder) Populate(parts citationParts) error {
@@ -195,7 +197,7 @@ func (e *apaEncoder) Contents() (string, error) {
 		if e.data.isArticle == true {
 			res += title
 		} else {
-			res += italics(title)
+			res += e.ctx.italics(title)
 		}
 	}
 
@@ -237,7 +239,7 @@ func (e *apaEncoder) Contents() (string, error) {
 		res = appendUnlessEndsWith(res, ".", []string{" ", ".", ","})
 		res = appendUnlessEndsWith(res, " ", []string{" "})
 
-		res += italics(mlaTitle(e.data.journal))
+		res += e.ctx.italics(mlaTitle(e.data.journal))
 	}
 
 	/*

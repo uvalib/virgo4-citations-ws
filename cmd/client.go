@@ -104,3 +104,19 @@ func (c *clientContext) warn(format string, args ...interface{}) {
 func (c *clientContext) err(format string, args ...interface{}) {
 	c.printf("ERROR:", format, args...)
 }
+
+func (c *clientContext) italics(s string) string {
+	if c.opts.nohtml == true {
+		return s
+	}
+
+	return fmt.Sprintf(`<em>%s</em>`, s)
+}
+
+func (c *clientContext) smallCaps(s string) string {
+	if c.opts.nohtml == true {
+		return s
+	}
+
+	return fmt.Sprintf(`<span style="font-variant: small-caps;">%s</span>`, s)
+}

@@ -6,7 +6,7 @@ import (
 )
 
 type citationType interface {
-	Init(string)
+	Init(*clientContext, string)
 	Populate(citationParts) error
 	Label() string
 	ContentType() string
@@ -89,7 +89,7 @@ func (s *citationsContext) handleCitationRequest(fmts []citationType) serviceRes
 	}
 
 	for _, fmt := range fmts {
-		fmt.Init(s.v4url)
+		fmt.Init(s.client, s.v4url)
 
 		if err := fmt.Populate(s.parts); err != nil {
 			return serviceResponse{status: http.StatusInternalServerError, err: err}
