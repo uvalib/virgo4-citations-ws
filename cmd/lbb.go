@@ -166,10 +166,6 @@ func (e *lbbEncoder) bookCitation() string {
 		commaList = append(commaList, s)
 	}
 
-	if s := e.buildEditors(e.data.editors); s != "" {
-		commaList = append(commaList, s)
-	}
-
 	if len(spaceList) > 0 {
 		commaList = append(commaList, strings.Join(spaceList, " "))
 	}
