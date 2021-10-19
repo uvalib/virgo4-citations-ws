@@ -305,7 +305,7 @@ func (e *cmsEncoder) Contents() (string, error) {
 	   end
 	*/
 
-	res = appendWithComma(res, e.data.publisher)
+	res = appendWithComma(res, e.data.fullPublisher)
 
 	/*
 	   # === Date of publication

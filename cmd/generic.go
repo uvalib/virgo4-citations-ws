@@ -55,6 +55,7 @@ type genericCitation struct {
 	pageTo          string
 	edition         string
 	publisher       string
+	fullPublisher   string
 	publicationType string
 	dataSource      string
 	date            string
@@ -344,24 +345,28 @@ func (c *genericCitation) setupDataSource(dataSource string) {
 
 func (c *genericCitation) setupPublisher(publisher, publishedPlace string) {
 	name := cleanEndPunctuation(publisher)
-	fullPublisher := name
+	placeOrName := name
+	fullPublisher := ""
 
 	if c.opts.publisherPlace == true {
 		place := cleanEndPunctuation(publishedPlace)
 
 		if name != "" && place != "" {
+			fullPublisher = place + ": " + name
+
 			switch {
 			case strings.Contains(name, place):
-				fullPublisher = name
+				placeOrName = name
 			case strings.Contains(place, name):
-				fullPublisher = place
+				placeOrName = place
 			default:
-				fullPublisher = place + ": " + name
+				placeOrName = fullPublisher
 			}
 		}
 	}
 
-	c.publisher = fullPublisher
+	c.publisher = placeOrName
+	c.fullPublisher = fullPublisher
 }
 
 func (c *genericCitation) setupDate(date string) {
