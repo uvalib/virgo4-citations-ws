@@ -10,22 +10,55 @@ import (
 	"github.com/microcosm-cc/bluemonday"
 )
 
-// subset of tags needed in code below
+// subset of ris tags needed in code below
+const risTagAbstract = "AB"
+const risTagAccessionNumber = "AN"
 const risTagAuthor = "AU"
 const risTagAuthorPrimary = "A1"
 const risTagAuthorSecondary = "A2"
-const risTagAuthorTertiary = "A3"
 const risTagAuthorSubsidiary = "A4"
+const risTagAuthorTertiary = "A3"
+const risTagCallNumber = "CN"
+const risTagDOI = "DO"
+const risTagDatabase = "DB"
+const risTagDate = "DA"
 const risTagEnd = "ER"
+const risTagFullTextLink = "L2"
+const risTagIssueNumber = "IS"
+const risTagJournalTitle = "T2"
 const risTagKeyword = "KW"
+const risTagLanguage = "LA"
 const risTagLibrary = "DP"
 const risTagNote = "N1"
 const risTagPeriodicalName = "J2"
+const risTagPlacePublished = "CY"
+const risTagPublicationYear = "PY"
+const risTagPublisher = "PB"
+const risTagReferenceID = "ID"
+const risTagRights = "C4"
+const risTagSerialNumber = "SN"
+const risTagSubtitle = risTagJournalTitle
+const risTagTitle = "TI"
 const risTagType = "TY"
+const risTagTypeOfWork = "M3"
 const risTagURL = "UR"
+const risTagVolumeNumber = "VL"
+
+// ris types
+const risTypeArt = "ART"
+const risTypeBook = "BOOK"
+const risTypeGeneric = "GEN"
+const risTypeGovernmentDocument = "GOVDOC"
+const risTypeJournal = "JOUR"
+const risTypeManuscript = "MANSCPT"
+const risTypeMap = "MAP"
+const risTypeMusic = "MUSIC"
+const risTypeNews = "NEWS"
+const risTypeSound = "SOUND"
+const risTypeThesis = "THES"
+const risTypeVideo = "VIDEO"
 
 // misc definitions
-const risTypeGeneric = "GEN"
 const risTruncateLength = 255
 const risLineEnding = "\r\n"
 const risLineFormat = "%s  - %s" + risLineEnding
@@ -83,6 +116,33 @@ func (e *risEncoder) Populate(parts citationParts) error {
 
 				e.addTagValue(risCode, risValue)
 			}
+		}
+	}
+
+	if len(e.tagValues[risTagType]) == 0 {
+		e.addTagValue(risTagType, risTypeGeneric)
+	}
+
+	// type-specific cleanups
+
+	risType := e.tagValues[risTagType][0]
+
+	// merge title/subtitle for book type citations, using first instance of each
+
+	if risType == risTypeBook {
+		if len(e.tagValues[risTagSubtitle]) > 0 {
+			title := firstElementOf(e.tagValues[risTagTitle])
+			subtitle := firstElementOf(e.tagValues[risTagSubtitle])
+
+			fullTitle := title
+			if subtitle != "" {
+				fullTitle = fullTitle + ": " + subtitle
+			}
+
+			fullTitle = removeTrailingPeriods(fullTitle)
+
+			e.tagValues[risTagTitle] = []string{fullTitle}
+			delete(e.tagValues, risTagSubtitle)
 		}
 	}
 
@@ -218,10 +278,6 @@ func (e *risEncoder) getTagValue(tag, val string) string {
 }
 
 func (e *risEncoder) Contents() (string, error) {
-	if len(e.tagValues[risTagType]) == 0 {
-		e.addTagValue(risTagType, risTypeGeneric)
-	}
-
 	url := fmt.Sprintf(`<a href="%s">%s</a>`, e.url, e.url)
 	e.addTagValue(risTagNote, url)
 
@@ -282,51 +338,51 @@ func init() {
 	// mapping of citation parts to RIS code(s)
 	risPartsMap = make(map[string][]string)
 
-	risPartsMap["abstract"] = []string{"AB"}
-	risPartsMap["advisor"] = []string{"AU"}
-	risPartsMap["author"] = []string{"AU"}
-	risPartsMap["call_number"] = []string{"CN"}
-	risPartsMap["content_provider"] = []string{"DB"}
-	risPartsMap["description"] = []string{"N1"}
-	risPartsMap["doi"] = []string{"DO"}
-	risPartsMap["editor"] = []string{"AU"}
-	risPartsMap["format"] = []string{"TY"}
-	risPartsMap["full_text_url"] = []string{"L2"}
-	risPartsMap["genre"] = []string{"M3"}
-	risPartsMap["id"] = []string{"ID"}
-	risPartsMap["issue"] = []string{"IS"}
-	risPartsMap["journal"] = []string{"T2"}
-	risPartsMap["language"] = []string{"LA"}
-	risPartsMap["library"] = []string{"DP"}
-	risPartsMap["location"] = []string{"AN"}
-	risPartsMap["published_location"] = []string{"CY"}
-	risPartsMap["published_date"] = []string{"DA", "PY"}
-	risPartsMap["publisher"] = []string{"PB"}
-	risPartsMap["rights"] = []string{"C4"}
-	risPartsMap["serial_number"] = []string{"SN"}
-	risPartsMap["series"] = []string{"T2"}
-	risPartsMap["subject"] = []string{"KW"}
-	risPartsMap["subtitle"] = []string{"T2"}
-	risPartsMap["title"] = []string{"TI"}
-	risPartsMap["url"] = []string{"UR"}
-	risPartsMap["volume"] = []string{"VL"}
+	risPartsMap["abstract"] = []string{risTagAbstract}
+	risPartsMap["advisor"] = []string{risTagAuthor}
+	risPartsMap["author"] = []string{risTagAuthor}
+	risPartsMap["call_number"] = []string{risTagCallNumber}
+	risPartsMap["content_provider"] = []string{risTagDatabase}
+	risPartsMap["description"] = []string{risTagNote}
+	risPartsMap["doi"] = []string{risTagDOI}
+	risPartsMap["editor"] = []string{risTagAuthor}
+	risPartsMap["format"] = []string{risTagType}
+	risPartsMap["full_text_url"] = []string{risTagFullTextLink}
+	risPartsMap["genre"] = []string{risTagTypeOfWork}
+	risPartsMap["id"] = []string{risTagReferenceID}
+	risPartsMap["issue"] = []string{risTagIssueNumber}
+	risPartsMap["journal"] = []string{risTagJournalTitle}
+	risPartsMap["language"] = []string{risTagLanguage}
+	risPartsMap["library"] = []string{risTagLibrary}
+	risPartsMap["location"] = []string{risTagAccessionNumber}
+	risPartsMap["published_location"] = []string{risTagPlacePublished}
+	risPartsMap["published_date"] = []string{risTagDate, risTagPublicationYear}
+	risPartsMap["publisher"] = []string{risTagPublisher}
+	risPartsMap["rights"] = []string{risTagRights}
+	risPartsMap["serial_number"] = []string{risTagSerialNumber}
+	risPartsMap["series"] = []string{risTagJournalTitle}
+	risPartsMap["subject"] = []string{risTagKeyword}
+	risPartsMap["subtitle"] = []string{risTagJournalTitle}
+	risPartsMap["title"] = []string{risTagTitle}
+	risPartsMap["url"] = []string{risTagURL}
+	risPartsMap["volume"] = []string{risTagVolumeNumber}
 
 	// mapping of citation formats (citation part "format") to RIS type
 	risTypesMap = make(map[string]string)
 
-	risTypesMap["art"] = "ART"
-	risTypesMap["article"] = "JOUR"
-	risTypesMap["book"] = "BOOK"
-	risTypesMap["generic"] = "GEN"
-	risTypesMap["government_document"] = "GOVDOC"
-	risTypesMap["journal"] = "JOUR"
-	risTypesMap["manuscript"] = "MANSCPT"
-	risTypesMap["map"] = "MAP"
-	risTypesMap["music"] = "MUSIC"
-	risTypesMap["news"] = "NEWS"
-	risTypesMap["sound"] = "SOUND"
-	risTypesMap["thesis"] = "THES"
-	risTypesMap["video"] = "VIDEO"
+	risTypesMap["art"] = risTypeArt
+	risTypesMap["article"] = risTypeJournal
+	risTypesMap["book"] = risTypeBook
+	risTypesMap["generic"] = risTypeGeneric
+	risTypesMap["government_document"] = risTypeGovernmentDocument
+	risTypesMap["journal"] = risTypeJournal
+	risTypesMap["manuscript"] = risTypeManuscript
+	risTypesMap["map"] = risTypeMap
+	risTypesMap["music"] = risTypeMusic
+	risTypesMap["news"] = risTypeNews
+	risTypesMap["sound"] = risTypeSound
+	risTypesMap["thesis"] = risTypeThesis
+	risTypesMap["video"] = risTypeVideo
 
 	// mapping of strings to append to authors, depending on type
 	risAppendMap = make(map[string]string)
