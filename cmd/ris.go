@@ -73,6 +73,7 @@ type risEncoder struct {
 }
 
 var risPartsMap map[string][]string
+var risPartsOrderedKeys []string
 var risTypesMap map[string]string
 var risAppendMap map[string]string
 
@@ -91,7 +92,8 @@ func (e *risEncoder) Init(c *clientContext, url string) {
 }
 
 func (e *risEncoder) Populate(parts citationParts) error {
-	for part, values := range parts {
+	for _, part := range risPartsOrderedKeys {
+		values := parts[part]
 		risCodes := risPartsMap[part]
 		postfix := risAppendMap[part]
 
@@ -366,6 +368,35 @@ func init() {
 	risPartsMap["title"] = []string{risTagTitle}
 	risPartsMap["url"] = []string{risTagURL}
 	risPartsMap["volume"] = []string{risTagVolumeNumber}
+
+	// define specific order for traversing the parts map, to ensure preferred
+	// (and stable) results for  citation parts that map to the same ris type
+	risPartsOrderedKeys = []string{
+		"author", "editor", "advisor", // risTagAuthor types -- order probably not important though
+		"subtitle", "journal", "series", // risTagJournalTitle types -- important for book citations
+		"abstract", // the rest, alphabetically
+		"call_number",
+		"content_provider",
+		"description",
+		"doi",
+		"format",
+		"full_text_url",
+		"genre",
+		"id",
+		"issue",
+		"language",
+		"library",
+		"location",
+		"published_location",
+		"published_date",
+		"publisher",
+		"rights",
+		"serial_number",
+		"subject",
+		"title",
+		"url",
+		"volume",
+	}
 
 	// mapping of citation formats (citation part "format") to RIS type
 	risTypesMap = make(map[string]string)
