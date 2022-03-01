@@ -10,7 +10,7 @@ import (
 	"github.com/microcosm-cc/bluemonday"
 )
 
-// subset of ris tags needed in code below
+// subset of RIS tags needed in code below
 const risTagAbstract = "AB"
 const risTagAccessionNumber = "AN"
 const risTagAuthor = "AU"
@@ -37,14 +37,14 @@ const risTagPublisher = "PB"
 const risTagReferenceID = "ID"
 const risTagRights = "C4"
 const risTagSerialNumber = "SN"
-const risTagSubtitle = risTagJournalTitle
+const risTagSubtitle = "X1" // not an actual RIS tag; only used for constructing full book titles
 const risTagTitle = "TI"
 const risTagType = "TY"
 const risTagTypeOfWork = "M3"
 const risTagURL = "UR"
 const risTagVolumeNumber = "VL"
 
-// ris types
+// RIS types
 const risTypeArt = "ART"
 const risTypeBook = "BOOK"
 const risTypeGeneric = "GEN"
@@ -125,27 +125,21 @@ func (e *risEncoder) Populate(parts citationParts) error {
 		e.addTagValue(risTagType, risTypeGeneric)
 	}
 
-	// type-specific cleanups
+	// if present, move subtitle to the end of the title
 
-	risType := e.tagValues[risTagType][0]
+	if len(e.tagValues[risTagSubtitle]) > 0 {
+		title := firstElementOf(e.tagValues[risTagTitle])
+		subtitle := firstElementOf(e.tagValues[risTagSubtitle])
 
-	// merge title/subtitle for book type citations, using first instance of each
-
-	if risType == risTypeBook {
-		if len(e.tagValues[risTagSubtitle]) > 0 {
-			title := firstElementOf(e.tagValues[risTagTitle])
-			subtitle := firstElementOf(e.tagValues[risTagSubtitle])
-
-			fullTitle := title
-			if subtitle != "" {
-				fullTitle = fullTitle + ": " + subtitle
-			}
-
-			fullTitle = removeTrailingPeriods(fullTitle)
-
-			e.tagValues[risTagTitle] = []string{fullTitle}
-			delete(e.tagValues, risTagSubtitle)
+		fullTitle := title
+		if subtitle != "" {
+			fullTitle = fullTitle + ": " + subtitle
 		}
+
+		fullTitle = removeTrailingPeriods(fullTitle)
+
+		e.tagValues[risTagTitle] = []string{fullTitle}
+		delete(e.tagValues, risTagSubtitle)
 	}
 
 	return nil
@@ -285,9 +279,12 @@ func (e *risEncoder) Contents() (string, error) {
 
 	tags := []string{}
 	for tag := range e.tagValues {
-		if tag != risTagType {
-			tags = append(tags, tag)
+		// prevent specific tags from appearing in RIS body
+		if tag == risTagType || tag == risTagSubtitle {
+			continue
 		}
+
+		tags = append(tags, tag)
 	}
 
 	sort.Strings(tags)
@@ -364,16 +361,16 @@ func init() {
 	risPartsMap["serial_number"] = []string{risTagSerialNumber}
 	risPartsMap["series"] = []string{risTagJournalTitle}
 	risPartsMap["subject"] = []string{risTagKeyword}
-	risPartsMap["subtitle"] = []string{risTagJournalTitle}
+	risPartsMap["subtitle"] = []string{risTagSubtitle}
 	risPartsMap["title"] = []string{risTagTitle}
 	risPartsMap["url"] = []string{risTagURL}
 	risPartsMap["volume"] = []string{risTagVolumeNumber}
 
 	// define specific order for traversing the parts map, to ensure preferred
-	// (and stable) results for  citation parts that map to the same ris type
+	// (or at least stable) values for citation parts that map to the same RIS type
 	risPartsOrderedKeys = []string{
-		"author", "editor", "advisor", // risTagAuthor types -- order probably not important though
-		"subtitle", "journal", "series", // risTagJournalTitle types -- important for book citations
+		"author", "editor", "advisor", // risTagAuthor types
+		"journal", "series", // risTagJournalTitle types
 		"abstract", // the rest, alphabetically
 		"call_number",
 		"content_provider",
@@ -392,6 +389,7 @@ func init() {
 		"publisher",
 		"rights",
 		"serial_number",
+		"subtitle",
 		"subject",
 		"title",
 		"url",
