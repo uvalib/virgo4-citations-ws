@@ -63,7 +63,7 @@ func (s *citationsContext) queryPoolRecord() (*v4api.Record, serviceResponse) {
 		}
 
 		s.log("[POOL] client.Do() failed: %s", resErr.Error())
-		s.log("ERROR: Failed response from %s %s - %d:%s. Elapsed Time: %d (ms)", req.Method, s.url, status, errMsg, elapsedMS)
+		s.err("Failed response from %s %s - %d:%s. Elapsed Time: %d (ms)", req.Method, s.url, status, errMsg, elapsedMS)
 		err = fmt.Errorf("failed to receive pool record response")
 		return nil, serviceResponse{status: http.StatusInternalServerError, err: err}
 	}
@@ -73,7 +73,14 @@ func (s *citationsContext) queryPoolRecord() (*v4api.Record, serviceResponse) {
 	if res.StatusCode != http.StatusOK {
 		errMsg := fmt.Errorf("unexpected status code %d", res.StatusCode)
 		s.log("[POOL] unexpected status code %d", res.StatusCode)
-		s.log("ERROR: Failed response from %s %s - %d:%s. Elapsed Time: %d (ms)", req.Method, s.url, res.StatusCode, errMsg, elapsedMS)
+
+		// 404 errors from the pool are likely old bookmarked items that have since become shadowed, or no longer exist
+		if res.StatusCode == http.StatusNotFound {
+			s.warn("Failed response from %s %s - %d:%s. Elapsed Time: %d (ms)", req.Method, s.url, res.StatusCode, errMsg, elapsedMS)
+		} else {
+			s.err("Failed response from %s %s - %d:%s. Elapsed Time: %d (ms)", req.Method, s.url, res.StatusCode, errMsg, elapsedMS)
+		}
+
 		err = fmt.Errorf("received pool record response code %d", res.StatusCode)
 		return nil, serviceResponse{status: http.StatusInternalServerError, err: err}
 	}
@@ -86,7 +93,7 @@ func (s *citationsContext) queryPoolRecord() (*v4api.Record, serviceResponse) {
 
 	if decErr := decoder.Decode(&rec); decErr != nil {
 		s.log("[POOL] Decode() failed: %s", decErr.Error())
-		s.log("ERROR: Failed response from %s %s - %d:%s. Elapsed Time: %d (ms)", req.Method, s.url, http.StatusInternalServerError, decErr.Error(), elapsedMS)
+		s.err("Failed response from %s %s - %d:%s. Elapsed Time: %d (ms)", req.Method, s.url, http.StatusInternalServerError, decErr.Error(), elapsedMS)
 		err = fmt.Errorf("failed to decode pool record response")
 		return nil, serviceResponse{status: http.StatusInternalServerError, err: err}
 	}
