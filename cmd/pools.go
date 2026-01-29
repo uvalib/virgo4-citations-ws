@@ -16,7 +16,7 @@ func (s *citationsContext) queryPoolRecord() (*v4api.Record, serviceResponse) {
 
 	if s.url == "" {
 		err = fmt.Errorf("missing or invalid url")
-		s.warn(err.Error())
+		s.warn("%s", err.Error())
 		return nil, serviceResponse{status: http.StatusBadRequest, err: err}
 	}
 
@@ -31,7 +31,7 @@ func (s *citationsContext) queryPoolRecord() (*v4api.Record, serviceResponse) {
 	token, jwtErr := v4jwt.Mint(claims, time.Duration(s.svc.config.JWT.Expiration)*time.Minute, s.svc.config.JWT.Key)
 	if jwtErr != nil {
 		err = fmt.Errorf("failed to mint JWT: %s", jwtErr.Error())
-		s.err(err.Error())
+		s.err("%s", err.Error())
 		return nil, serviceResponse{status: http.StatusBadRequest, err: err}
 	}
 

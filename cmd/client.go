@@ -76,7 +76,7 @@ func (c *clientContext) logResponse(resp serviceResponse) {
 		msg = msg + fmt.Sprintf(", error: %s", resp.err.Error())
 	}
 
-	c.log(msg)
+	c.log("%s", msg)
 }
 
 func (c *clientContext) printf(prefix, format string, args ...interface{}) {
