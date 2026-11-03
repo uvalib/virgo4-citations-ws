@@ -1,8 +1,10 @@
 package main
 
 import (
+	"encoding/xml"
 	"fmt"
 	"net/http"
+	"regexp"
 	"strings"
 
 	"github.com/gin-gonic/gin"
@@ -88,22 +90,55 @@ func (p *serviceContext) unapiHandler(c *gin.Context) {
 	id := c.Query("id")
 	format := c.Query("format")
 
-	// no params: formats for any objects this endpoint will provide (ris only)
-	// id param only: formats for this object (ris only)
+	// no params: formats for any objects this endpoint will provide (here, ris only)
+	// id param only: formats for this object (also ris only)
 	// in these cases, response will be the same (modulo an id attribute, and http status)
-	if format == "" {
-		idAttr := ""
-		status := http.StatusOK
 
+	if format == "" {
+		// build xml response via marshaling to guard against script injection
+		type unapiFormat struct {
+			Name string `xml:"name,attr"`
+			Type string `xml:"type,attr"`
+		}
+
+		type unapiFormats struct {
+			XMLName xml.Name      `xml:"formats"`
+			ID      string        `xml:"id,attr,omitempty"`
+			Formats []unapiFormat `xml:"format"`
+		}
+
+		data := unapiFormats{
+			ID: id,
+			Formats: []unapiFormat{
+				{
+					Name: "ris",
+					Type: p.config.Formats.RIS.ContentType,
+				},
+			},
+		}
+
+		output, err := xml.Marshal(data)
+		if err != nil {
+			c.String(http.StatusInternalServerError, err.Error())
+			return
+		}
+
+		// go xml does not support self-closing tags, which are used in the unAPI spec, and
+		// therefore may be expected by consumers.  as a workaround, use regex to close the
+		// format tag which is the only tag used here that can (and will) be empty.
+		re := regexp.MustCompile(`<(format)([^>]*?)></format>`)
+		selfClosed := re.ReplaceAll(output, []byte("<$1$2 />"))
+
+		// build final response: "<?xml" ... header, plus unAPI response
+		res := xml.Header + string(selfClosed)
+
+		status := http.StatusOK
 		if id != "" {
-			idAttr = fmt.Sprintf(` id="%s"`, id)
 			status = http.StatusMultipleChoices
 		}
 
-		formatsXML := fmt.Sprintf(`<?xml version="1.0" encoding="UTF-8"?><formats%s><format name="ris" type="%s" /></formats>`, idAttr, p.config.Formats.RIS.ContentType)
-
 		c.Header("Content-Type", "application/xml")
-		c.String(status, formatsXML)
+		c.String(status, res)
 
 		return
 	}
