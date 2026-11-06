@@ -56,10 +56,6 @@ func (s *citationsContext) itemURLisFromAllowedHost() bool {
 		return false
 	}
 
-	s.log("item url     = [%s]", s.url)
-	s.log("u.Host       = [%s]", u.Host)
-	s.log("u.Hostname() = [%s]", u.Hostname())
-
 	for _, pattern := range s.svc.config.Pools.AllowedHosts {
 		re, err := regexp.Compile(pattern)
 		if err != nil {
@@ -67,10 +63,8 @@ func (s *citationsContext) itemURLisFromAllowedHost() bool {
 			continue
 		}
 		if re.MatchString(u.Host) {
-			s.log("host [%s] matched pattern [%s]", u.Host, pattern)
 			return true
 		}
-		s.log("host [%s] did NOT match pattern [%s]", u.Host, pattern)
 	}
 
 	return false

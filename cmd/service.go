@@ -3,7 +3,7 @@ package main
 import (
 	"fmt"
 	"log"
-	"math/rand"
+	"math/rand/v2"
 	"net"
 	"net/http"
 	"path/filepath"
@@ -83,7 +83,7 @@ func initializeService(cfg *serviceConfig) *serviceContext {
 	p := serviceContext{}
 
 	p.config = cfg
-	p.randomSource = rand.New(rand.NewSource(time.Now().UnixNano()))
+	p.randomSource = rand.New(rand.NewPCG(rand.Uint64(), rand.Uint64()))
 
 	p.initVersion()
 	p.initPools()
