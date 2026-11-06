@@ -914,7 +914,7 @@ func init() {
 	re.fieldEnd = regexp.MustCompile(`[,;:\/\s]+$`)
 	re.trailingPeriods = regexp.MustCompile(`\.+$`)
 	re.capitalizeable = regexp.MustCompile(`^[a-z][a-z\s]`)
-	re.doubleQuoted = regexp.MustCompile(`(?U)[#{"}\p{Pi}\p{Pf}]`)
+	re.doubleQuoted = regexp.MustCompile(`(?U)["\p{Pi}\p{Pf}]`)
 	re.lowerLastNamePart = regexp.MustCompile(`(?U)^([[:lower:]])+([[[:lower:]]\s.-])*$`)
 	re.doiPrefix = regexp.MustCompile(`^doi:`)
 	re.doiURL = regexp.MustCompile(`^https?://(\w+\.)?doi\.org/`)
