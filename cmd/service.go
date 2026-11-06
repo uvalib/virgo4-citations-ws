@@ -7,6 +7,7 @@ import (
 	"net"
 	"net/http"
 	"path/filepath"
+	"regexp"
 	"runtime"
 	"strings"
 	"time"
@@ -52,6 +53,10 @@ func (p *serviceContext) initVersion() {
 
 func (p *serviceContext) initPools() {
 	// client setup
+
+	for _, pattern := range p.config.Pools.AllowedHosts {
+		_ = regexp.MustCompile(pattern)
+	}
 
 	connTimeout := integerWithMinimum(p.config.Pools.ConnTimeout, 1)
 	readTimeout := integerWithMinimum(p.config.Pools.ReadTimeout, 1)

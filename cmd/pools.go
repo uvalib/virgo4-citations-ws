@@ -3,7 +3,10 @@ package main
 import (
 	"encoding/json"
 	"fmt"
+	"net"
 	"net/http"
+	"net/url"
+	"regexp"
 	"strings"
 	"time"
 
@@ -11,20 +14,82 @@ import (
 	"github.com/uvalib/virgo4-jwt/v4jwt"
 )
 
+func (s *citationsContext) urlParseStrict(rawURL string) (*url.URL, error) {
+	// meticulously validate item urls passed to this service
+
+	u, err := url.ParseRequestURI(rawURL)
+	if err != nil {
+		return nil, err
+	}
+
+	// ensure the url points to a webpage
+	if u.Scheme != "http" && u.Scheme != "https" {
+		return nil, fmt.Errorf("unsupported scheme: [%s]", u.Scheme)
+	}
+
+	// ensure a host is supplied in the url
+	if u.Host == "" {
+		return nil, fmt.Errorf("missing host")
+	}
+
+	// if the host contains a port, validate it with net.SplitHostPort, which will
+	// catch things like "hostname:123:456" that slip past url.Parse{,RequestURI}.
+
+	// check whether host contains a port delimiter, ignoring hosts that end in the
+	// IPv6 bracket delimiter (because they will contain colons, but not a port):
+	if strings.Contains(u.Host, ":") && !strings.HasSuffix(u.Host, "]") {
+		_, _, err := net.SplitHostPort(u.Host)
+		if err != nil {
+			return nil, fmt.Errorf("invalid host/port [%s]: %w", u.Host, err)
+		}
+	}
+
+	return u, nil
+}
+
+func (s *citationsContext) itemURLisFromAllowedHost() bool {
+	// check host from provided url against configured whitelist
+
+	u, err := s.urlParseStrict(s.url)
+	if err != nil {
+		s.warn("item url parsing failed: %s", err.Error())
+		return false
+	}
+
+	s.log("item url     = [%s]", s.url)
+	s.log("u.Host       = [%s]", u.Host)
+	s.log("u.Hostname() = [%s]", u.Hostname())
+
+	for _, pattern := range s.svc.config.Pools.AllowedHosts {
+		re, err := regexp.Compile(pattern)
+		if err != nil {
+			s.warn("skipping invalid item url allowed host pattern [%s]: %s", pattern, err.Error())
+			continue
+		}
+		if re.MatchString(u.Host) {
+			s.log("host [%s] matched pattern [%s]", u.Host, pattern)
+			return true
+		}
+		s.log("host [%s] did NOT match pattern [%s]", u.Host, pattern)
+	}
+
+	return false
+}
+
 func (s *citationsContext) queryPoolRecord() (*v4api.Record, serviceResponse) {
 	var err error
 
-	if s.url == "" {
-		err = fmt.Errorf("missing or invalid url")
+	// validate that the user-provided item url is from an allowed host.
+	// otherwise an attacker can abuse this to get a token with IsUVA privileges
+
+	if s.itemURLisFromAllowedHost() == false {
+		err = fmt.Errorf("item url is invalid or unsupported")
 		s.warn("%s", err.Error())
 		return nil, serviceResponse{status: http.StatusBadRequest, err: err}
 	}
 
 	// create a short-lived single-use token, (ab)using IsUVA claim to make
 	// sure we get all possible info from the pool.
-
-	// there is a risk that anyone can access protected resources through
-	// this service, but that is limited to the citation info exposed by each pool.
 
 	claims := v4jwt.V4Claims{IsUVA: true}
 

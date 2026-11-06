@@ -12,8 +12,9 @@ import (
 const envPrefix = "VIRGO4_CITATIONS_WS"
 
 type serviceConfigPools struct {
-	ConnTimeout string `json:"conn_timeout,omitempty"`
-	ReadTimeout string `json:"read_timeout,omitempty"`
+	ConnTimeout  string   `json:"conn_timeout,omitempty"`
+	ReadTimeout  string   `json:"read_timeout,omitempty"`
+	AllowedHosts []string `json:"allowed_hosts,omitempty"`
 }
 
 type serviceConfigJWT struct {
