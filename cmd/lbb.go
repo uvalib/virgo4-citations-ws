@@ -404,8 +404,9 @@ func (e *lbbEncoder) magazineDate(y, m, d int) string {
 func (e *lbbEncoder) abbreviateNames(str string) string {
 	res := str
 
-	res = e.applyTableT6(res)
+	// apply geographical table first so that place names are abbreviated correctly
 	res = e.applyTableT10(res)
+	res = e.applyTableT6(res)
 
 	return res
 }
@@ -413,9 +414,10 @@ func (e *lbbEncoder) abbreviateNames(str string) string {
 func (e *lbbEncoder) abbreviateInstitutionalNamesInPeriodicalTitles(str string) string {
 	res := str
 
+	// apply geographical table first so that place names are abbreviated correctly
+	res = e.applyTableT10(res)
 	res = e.applyTableT13(res)
 	res = e.applyTableT6(res)
-	res = e.applyTableT10(res)
 
 	return res
 }
@@ -466,6 +468,13 @@ func (e *lbbEncoder) applyTableT13(str string) string {
 
 func init() {
 	caseNamesAndInstitutionalAuthors := []lbbTableEntry{
+		// these patterns contain a shorter pattern, so list them first for proper abbreviation:
+		{pattern: "Artificial Intelligence", abbrev: "A.I."},
+		{pattern: "Civil Libert(y|ies)", abbrev: "C.L."},
+		{pattern: "Civil Rights", abbrev: "C.R."},
+		{pattern: "Supreme Court", abbrev: "Sup. Ct."},
+		{pattern: "United States(| of America)", abbrev: "U.S."},
+		// now the rest
 		{pattern: "Academ(ic|y)", abbrev: "Acad."},
 		{pattern: "Account(ant|ing|ancy)", abbrev: "Acct."},
 		{pattern: "Administrat(ive|ion)", abbrev: "Admin."},
@@ -484,7 +493,6 @@ func init() {
 		{pattern: "Annual", abbrev: "Ann."},
 		{pattern: "Appellate", abbrev: "App."},
 		{pattern: "Arbitrat(ion|or)", abbrev: "Arb."},
-		{pattern: "Artificial Intelligence", abbrev: "A.I."},
 		{pattern: "Associate", abbrev: "Assoc."},
 		{pattern: "Association", abbrev: "Ass'n"},
 		{pattern: "Atlantic", abbrev: "Atl."},
@@ -510,8 +518,6 @@ func init() {
 		{pattern: "Chronicle", abbrev: "Chron."},
 		{pattern: "Circuit", abbrev: "Cir."},
 		{pattern: "Civil", abbrev: "Civ."},
-		{pattern: "Civil Libert(y|ies)", abbrev: "C.L."},
-		{pattern: "Civil Rights", abbrev: "C.R."},
 		{pattern: "Coalition", abbrev: "Coal."},
 		{pattern: "College", abbrev: "Coll."},
 		{pattern: "Commentary", abbrev: "Comment."},
@@ -740,7 +746,6 @@ func init() {
 		{pattern: "Street", abbrev: "St."},
 		{pattern: "Studies", abbrev: "Stud."},
 		{pattern: "Subcommittee", abbrev: "Subcomm."},
-		{pattern: "Supreme Court", abbrev: "Sup. Ct."},
 		{pattern: "Surety", abbrev: "Sur."},
 		{pattern: "Survey", abbrev: "Surv."},
 		{pattern: "Symposium", abbrev: "Symp."},
@@ -759,7 +764,6 @@ func init() {
 		{pattern: "Trust(|ee)", abbrev: "Tr."},
 		{pattern: "Turnpike", abbrev: "Tpk."},
 		{pattern: "Uniform", abbrev: "Unif."},
-		{pattern: "United States", abbrev: "U.S."},
 		{pattern: "University", abbrev: "Univ."},
 		{pattern: "Urban", abbrev: "Urb."},
 		{pattern: "Utility", abbrev: "Util."},
@@ -1084,7 +1088,7 @@ func init() {
 		{pattern: "Ukraine", abbrev: "Ukr."},
 		{pattern: "United Arab Emirates", abbrev: "U.A.E."},
 		{pattern: "United Kingdom", abbrev: "U.K."},
-		{pattern: "United States of America", abbrev: "U.S."},
+		{pattern: "United States(| of America)", abbrev: "U.S."},
 		{pattern: "Uruguay", abbrev: "Uru."},
 		{pattern: "Uzbekistan", abbrev: "Uzb."},
 		{pattern: "Vanuatu", abbrev: "Vanuatu"},
