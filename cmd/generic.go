@@ -829,7 +829,7 @@ func abbreviateName(name string) string {
 				keep = keep || nameSuffixMap[piece]
 
 				if keep == false {
-					piece = string(piece[0]) + "."
+					piece = string([]rune(piece)[0]) + "."
 				}
 
 				resPieces = append(resPieces, piece)
