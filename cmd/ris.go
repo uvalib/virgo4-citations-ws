@@ -261,7 +261,7 @@ func (e *risEncoder) getTagValue(tag, val string) string {
 
 		if e.isLimitedLengthTag(tag) == true {
 			if len(cleaned) > risTruncateLength {
-				cleaned = cleaned[0:risTruncateLength]
+				cleaned = truncateStringAtRuneBoundary(cleaned, risTruncateLength)
 			}
 		}
 

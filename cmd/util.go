@@ -2,6 +2,7 @@ package main
 
 import (
 	"strconv"
+	"unicode/utf8"
 )
 
 // miscellaneous utility functions
@@ -59,4 +60,19 @@ func removeEntries(haystack []string, needles []string) []string {
 	}
 
 	return res
+}
+
+func truncateStringAtRuneBoundary(s string, maxBytes int) string {
+	if len(s) <= maxBytes {
+		return s
+	}
+
+	// determine which byte to truncate at by walking backward
+	// byte-by-byte until we find the start of a rune
+	n := maxBytes
+	for n > 0 && !utf8.RuneStart(s[n]) {
+		n--
+	}
+
+	return s[:n]
 }
